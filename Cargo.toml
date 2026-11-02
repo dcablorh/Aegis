@@ -1,3 +1,0 @@
-[workspace]
-members = ["crates/aegis-types", "contracts/aegis-vault", "enclave/aegis-wasi"]
-resolver = "2"
