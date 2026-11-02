@@ -69,6 +69,40 @@ pub struct EnclaveRescueDecision {
     pub attestation_sha256: String,
 }
 
+impl EnclaveRescueDecision {
+    /// Bytes the enclave signs and the vault verifies: `sha256` over a fixed, length-prefixed layout of every
+    /// field that moves money. The signature and attestation fields themselves are not part of it.
+    pub fn signing_message(&self) -> [u8; 32] {
+        use sha2::{Digest, Sha256};
+        fn field(h: &mut Sha256, bytes: &[u8]) {
+            h.update((bytes.len() as u32).to_be_bytes());
+            h.update(bytes);
+        }
+        let mut h = Sha256::new();
+        h.update(b"aegis-decision-v1");
+        field(&mut h, self.request_id.as_bytes());
+        field(&mut h, self.account_id.as_str().as_bytes());
+        h.update(self.observed_hf_bps.to_be_bytes());
+        h.update(self.trigger_hf_bps.to_be_bytes());
+        h.update(self.target_hf_bps.to_be_bytes());
+        h.update([self.action as u8]);
+        field(&mut h, self.repay_amount_raw.as_bytes());
+        match &self.oneclick_quote {
+            None => h.update([0u8]),
+            Some(q) => {
+                h.update([1u8, q.dry as u8]);
+                field(&mut h, q.quote_id.as_bytes());
+                field(&mut h, q.deposit_address.as_bytes());
+                field(&mut h, q.amount_in.as_bytes());
+                field(&mut h, q.amount_out.as_bytes());
+                h.update(q.solver_spread_bps.to_be_bytes());
+                h.update(q.liquidation_penalty_saved_bps.to_be_bytes());
+            }
+        }
+        h.finalize().into()
+    }
+}
+
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum IntentLifecycleState {
@@ -173,6 +207,9 @@ pub struct EnclaveExecutionInput {
     pub policy: EncryptedSolvencyPolicy,
     pub position: PositionSnapshot,
     pub price: OraclePricePayload,
+    /// Older signed feeds (oldest first). The enclave verifies each one and uses them for volatility.
+    #[serde(default)]
+    pub price_history: Vec<OraclePricePayload>,
     /// Unix seconds at request time (from the contract's block timestamp).
     pub now_unix_s: u64,
 }
@@ -210,6 +247,21 @@ mod tests {
             assert_ne!(h, q.commitment_hash().unwrap());
         }
         assert!(PolicyPlaintext { salt_hex: "zz".into(), ..p }.commitment_hash().is_err());
+    }
+
+    #[test]
+    fn signing_message_changes_with_any_money_field() {
+        let a = decision();
+        let m = a.signing_message();
+        let mut b = decision();
+        b.repay_amount_raw = "345600001".into();
+        assert_ne!(m, b.signing_message());
+        let mut c = decision();
+        c.oneclick_quote.as_mut().unwrap().deposit_address = "evil".into();
+        assert_ne!(m, c.signing_message());
+        let mut d = decision();
+        d.enclave_signature_hex = "00".repeat(64);
+        assert_eq!(m, d.signing_message());
     }
 
     #[test]
