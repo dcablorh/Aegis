@@ -30,5 +30,5 @@ Source: https://app.outlayer.ai/docs/near-integration
 - Freshness: Invariant 4 uses `publish_time`/timestamp vs `block_timestamp` (<= 60 s). Initial pinned key must be confirmed through a trusted channel (open item).
 - `aegis-types::OraclePricePayload` mirrors this shape (`payload`, `signature_b64`, `public_key`).
 
-### Version pins (M2)
-- `near-sdk ~5.24` because the installed rustc is 1.94.1 and near-sdk 5.30 needs 1.95. `aegis-types` uses `near-account-id 2.6` to match, so both crates share one `AccountId` type. Move both forward together if rustc is upgraded.
+### Version pins
+- rustc 1.99.1, `near-sdk 5.30.0`, `near-account-id 3.0.0` (shared by `aegis-types` and the vault so both use one `AccountId`).
