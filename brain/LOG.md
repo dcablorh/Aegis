@@ -1,5 +1,13 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-02 (testnet spike, read-only part)
+**Checked over public testnet RPC (no accounts, no funds)**
+- `outlayer.testnet` is live and answers view calls (`estimate_execution_cost` works).
+- `price-oracle.testnet` is live.
+- `intents.testnet` does **not** exist (empty account). Confirms there is no NEAR Intents on testnet: the cross-chain leg can only be a dry-run quote there.
+- Burrow testnet (`contract.1638481328.burrow.testnet`) uses its **own** price oracle, `priceoracle.testnet`, with a 90 s recency limit. Our rescue prices come from `price-oracle.testnet`, so the two can differ slightly. The demo must say which price drives which decision.
+- Still to do (needs a testnet account): deploy the position contract, open a small `usdc.fakes.testnet` loan, call repay, watch debt drop.
+
 ## 2026-11-02 (M3 + M5 vault rescue, position sub-account)
 **Worked**
 - Checked Burrow testnet over RPC: `contract.1638481328.burrow.testnet` is live; `usdc.fakes.testnet` and `wrap.testnet` are listed and can be borrowed/used as collateral.
