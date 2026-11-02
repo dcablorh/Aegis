@@ -1,0 +1,19 @@
+# Next steps (in order)
+
+1. **Merge PR #3** (vault) into `dev1/staging`.
+2. **M4, the enclave** (`enclave/aegis-wasi`), on a new branch `dev1/enclave` off staging.
+   - Split into a library plus a thin `main`, so the judge script can run it on a normal computer.
+   - Reads one JSON from stdin, prints one JSON decision to stdout.
+   - Parts: check the price signature and age, open the policy and check it matches the fingerprint, compute the loan health, work out the secret trigger level, work out how much debt to repay, check the swap cost is acceptable, sign the result.
+   - Use whole-number maths only (no decimals) so results are identical every time.
+   - Tests with fixed example numbers, e.g. health 1.07 should lead to repaying about 345.60 USDC.
+3. **Share the example numbers with Developer 2** so their website maths matches ours.
+4. **M3**: price check, `trigger_solvency_check`, the rescue lock. Needs the oracle public key first.
+5. **M5**: handle the enclave answer (OutLayer returns it through a normal callback, not pause/resume), save an approved rescue ticket, repay Burrow in a second call, handle refunds and failures.
+6. **M6**: the "compromised keeper tries to steal funds" test, plus one test for each of the five rules.
+7. **M7**: build, deploy to **testnet**, update docs, give Developer 2 the addresses.
+8. Day before deadline: make repo public, record demo, X post, submission. All need the human's OK.
+
+## Needs the human's decision later
+- Any mainnet use or real-money test.
+- Making the repo public, posting on X, sending the final submission.
