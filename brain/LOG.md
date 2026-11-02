@@ -1,5 +1,24 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-02 (live testnet spike: position -> Burrow)
+**Setup (testnet only, free faucet funds, keys stay in `~/.near-credentials`, never in the repo)**
+- `aegis-vault-dev1.testnet` stands in for the vault (10 NEAR from the faucet).
+- `alice.aegis-vault-dev1.testnet` is the position sub-account (3 NEAR) with `aegis-position` deployed and initialised. The compiled wasm was accepted by testnet as-is.
+- Registered alice on Burrow testnet, minted 1000 fake USDC (`usdc.fakes.testnet`), put 600 in Burrow as collateral.
+
+**Worked**
+- Burrow accepted a collateral deposit made with `ft_transfer_call` and the `Execute` message. So the message format is right.
+- The vault account called `repay` on the position. The position called the token, the token called Burrow, and Burrow credited **the position account** (`alice...`) in its deposit event. That is the whole point of the sub-account design.
+- The position's own checks work on a real network (only the vault account may call it).
+
+**Could not do**
+- Open a real loan: Burrow testnet's price oracle (`priceoracle.testnet`) returns no prices, so any borrow fails with "Asset price is missing". Without debt, the repay was handed back (1 USDC refunded), so we have **not** yet seen a debt actually go down.
+- Options: wait for testnet prices to return; run our own Burrow copy with a mock price feed; or show the debt drop on mainnet with a tiny amount (needs the human's OK).
+
+**Lessons**
+- `cargo install near-cli-rs` fails on Windows (OpenSSL). `npm install -g near-cli-rs` works, but run it from PowerShell: Git Bash's tar breaks on `C:\` paths.
+- Burrow needs the caller registered, the token needs the caller registered, and `oracle_call` needs exactly 1 yoctoNEAR attached.
+
 ## 2026-11-02 (testnet spike, read-only part)
 **Checked over public testnet RPC (no accounts, no funds)**
 - `outlayer.testnet` is live and answers view calls (`estimate_execution_cost` works).

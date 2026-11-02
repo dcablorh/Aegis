@@ -22,3 +22,7 @@
 - Next: testnet spike. Create a position sub-account, put the position contract on it, open a small Burrow loan with `usdc.fakes.testnet`, call `repay` from a vault, and watch Burrow's debt drop.
 - Then: find out OutLayer's real reply shape and adjust `process_decision` if needed.
 - Then: M6 integration tests with `near-workspaces` (one per rule) and M7 deploy.
+
+## Update (spike)
+- Decide how to show a real debt drop: wait for testnet prices, run a mock-price Burrow, or a tiny mainnet test (needs human OK).
+- Still untested: OutLayer's real reply shape (needs a deployed OutLayer project and the enclave wasm).

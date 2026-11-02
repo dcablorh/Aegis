@@ -36,8 +36,11 @@ _Last updated: 2026-11-02 (Developer 1)_
 ## Blockers
 - None. Burrow repay problem solved with per-borrower position sub-accounts (DECISIONS.md).
 
+## Testnet accounts (free faucet funds, keys local only)
+- `aegis-vault-dev1.testnet` (stand-in vault), `alice.aegis-vault-dev1.testnet` (position, `aegis-position` deployed).
+
 ## Unverified assumptions (must be tested on testnet)
+- (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
 - The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).
-- Burrow accepts the repay message from the position account (read in source, never run).
 - Moving the reserve to a 1Click deposit address with a plain token transfer works for NEAR-side origin tokens.
 - Testnet has no NEAR Intents, so the cross-chain leg can only be shown as dry-run quotes there.
