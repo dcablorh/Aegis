@@ -17,3 +17,8 @@
 ## Needs the human's decision later
 - Any mainnet use or real-money test.
 - Making the repo public, posting on X, sending the final submission.
+
+## Update (M5 code done)
+- Next: testnet spike. Create a position sub-account, put the position contract on it, open a small Burrow loan with `usdc.fakes.testnet`, call `repay` from a vault, and watch Burrow's debt drop.
+- Then: find out OutLayer's real reply shape and adjust `process_decision` if needed.
+- Then: M6 integration tests with `near-workspaces` (one per rule) and M7 deploy.

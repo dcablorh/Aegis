@@ -1,5 +1,18 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-02 (M3 + M5 vault rescue, position sub-account)
+**Worked**
+- Checked Burrow testnet over RPC: `contract.1638481328.burrow.testnet` is live; `usdc.fakes.testnet` and `wrap.testnet` are listed and can be borrowed/used as collateral.
+- Built `contracts/aegis-position` (7 tests) and the vault rescue flow: trigger with oracle check, enclave callback, signed ticket, execute, final status (35 vault tests). Both build for wasm.
+
+**Failed, then fixed**
+- `.into()` on a method name was ambiguous with the newer toolkit; removed it.
+- The toolkit-upgrade commit was not in the merged vault PR, so staging was still on the old toolkit. This work is stacked on the enclave PR which carries the upgrade.
+
+**Lessons**
+- A panic inside a callback undoes its changes, so the callback records a reason and frees the lock instead.
+- Not yet proven on a real network: OutLayer's reply shape and Burrow accepting the repay.
+
 ## 2026-11-02 (M4 enclave)
 **Worked**
 - Built the enclave as a library plus a thin program: price check, policy decryption, loan health, volatility trigger, repayment size, swap-quote check and signing. 27 tests pass.

@@ -8,16 +8,17 @@ _Last updated: 2026-11-02 (Developer 1)_
 | M0 | Check tools and read the real docs (OutLayer, price oracle) | Done |
 | M1 | Shared Rust types: fingerprint, price feed, rescue ticket, errors | Done, merged to staging |
 | M2 | Vault: store policies, keepers, allowed recipients | Done, in PR #3 |
-| M3 | Price check + start-a-rescue + lock | Not started |
+| M3 | Price check + start-a-rescue + lock | Done, in PR (needs real OutLayer test) |
 | M4 | Secret-box program (enclave): the maths and the decision | Done, in PR (needs wasm build check, see below) |
-| M5 | Handle the decision, repay on Burrow, handle refund/fail | Not started |
+| M5 | Handle the decision, repay on Burrow, handle refund/fail | Done in code with unit tests; not run on testnet |
 | M6 | Security attack test + one test per rule | Not started |
 | M7 | Build, deploy to testnet, final docs | Not started |
 
 ## Tests right now
 - `aegis-types`: 7 passing.
 - `aegis-wasi` (enclave): 27 passing.
-- `aegis-vault`: 11 passing. Contract also builds for the NEAR target.
+- `aegis-vault`: 35 passing (policy, keepers, oracle, rescue lifecycle, attack cases).
+- `aegis-position`: 7 passing.
 
 ## Open pull requests
 - #3 Vault contract (into `dev1/staging`).
@@ -33,4 +34,10 @@ _Last updated: 2026-11-02 (Developer 1)_
 - Whether `outlayer.testnet` is live, and how the enclave's signing key reaches the contract (needed for M5).
 
 ## Blockers
-- M5 design: Burrow cannot repay on behalf of another account (see LOG.md, M5 research). Needs a decision on how the rescue reaches the borrower's loan.
+- None. Burrow repay problem solved with per-borrower position sub-accounts (DECISIONS.md).
+
+## Unverified assumptions (must be tested on testnet)
+- The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).
+- Burrow accepts the repay message from the position account (read in source, never run).
+- Moving the reserve to a 1Click deposit address with a plain token transfer works for NEAR-side origin tokens.
+- Testnet has no NEAR Intents, so the cross-chain leg can only be shown as dry-run quotes there.
