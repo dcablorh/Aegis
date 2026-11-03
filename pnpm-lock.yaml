@@ -21,6 +21,8 @@ importers:
         specifier: workspace:*
         version: link:../shared-types
 
+  packages/rhea-client: {}
+
   packages/shared-types: {}
 
 packages:
