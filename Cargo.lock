@@ -19,6 +19,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "aegis-position"
+version = "0.1.0"
+dependencies = [
+ "near-sdk",
+]
+
+[[package]]
 name = "aegis-types"
 version = "0.1.0"
 dependencies = [
@@ -36,6 +43,8 @@ name = "aegis-vault"
 version = "0.1.0"
 dependencies = [
  "aegis-types",
+ "base64 0.22.1",
+ "ed25519-dalek",
  "hex",
  "near-sdk",
 ]

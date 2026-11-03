@@ -13,3 +13,7 @@
 | 2026-11-02 | Enclave signs `sha256` of every money field of its decision; the shared function is in `aegis-types` | The vault must verify the exact same bytes. |
 | 2026-11-02 | Swap-cost guard compares spread to the penalty avoided under a 20% collateral drop | The plan's version is always zero when the loan is still healthy. This is an assumption to review. |
 | 2026-11-02 | Price history is passed in the input (`price_history`), each entry signature-checked | The oracle gives one price per call; volatility needs several. |
+| 2026-11-02 | Each borrower gets a position sub-account (e.g. `alice.<vault>`) holding their Burrow loan; a small contract on it obeys only the vault | Burrow repays whichever account sends the tokens, so the loan must live on an account the vault can instruct. Keeps health and liquidation per borrower. |
+| 2026-11-02 | A swap deposit address is allowed only while it sits inside the borrower's in-flight signed ticket | Keeps the "no arbitrary recipient" rule while still paying a different address each time. |
+| 2026-11-02 | The enclave callback never panics once the lock is ours; bad answers free the lock and log a reason | A panic would roll the lock back and leave it stuck. |
+| 2026-11-02 | A lying keeper cannot redirect money: `report_intent_status` only moves a capped repay amount from the borrower's own position to Burrow | The keeper reports swap outcomes, so its power must be limited. |

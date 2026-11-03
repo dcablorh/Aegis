@@ -1,6 +1,11 @@
 //! AegisVault: stores each borrower's policy as a public commitment plus ciphertext (never the
 //! plaintext thresholds) and only lets registered keepers and approved recipients touch rescues.
 
+mod oracle;
+mod rescue;
+#[cfg(test)]
+mod rescue_tests;
+
 use aegis_types::{errors, EncryptedSolvencyPolicy, RescueLock};
 use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{env, near, require, AccountId, BorshStorageKey, PanicOnDefault};
@@ -15,6 +20,8 @@ enum StorageKey {
     Policies,
     Keepers,
     Locks,
+    Positions,
+    Tickets,
 }
 
 #[near(contract_state)]
@@ -27,9 +34,19 @@ pub struct AegisVault {
     pub ref_exchange_id: AccountId,
     pub outlayer_contract_id: AccountId,
     pub intents_contract_id: AccountId,
-    policies: LookupMap<AccountId, EncryptedSolvencyPolicy>,
-    keepers: LookupSet<AccountId>,
-    locks: LookupMap<AccountId, RescueLock>,
+    pub(crate) policies: LookupMap<AccountId, EncryptedSolvencyPolicy>,
+    pub(crate) keepers: LookupSet<AccountId>,
+    pub(crate) locks: LookupMap<AccountId, RescueLock>,
+    /// borrower -> the sub-account that holds their Burrow loan and reserve tokens
+    pub(crate) positions: LookupMap<AccountId, AccountId>,
+    pub(crate) tickets: LookupMap<String, rescue::TicketRecord>,
+    /// Ed25519 key (hex) the enclave signs decisions with. Empty = rescues disabled.
+    pub enclave_public_key_hex: String,
+    /// sha256 (hex) of the enclave wasm that decisions must be attested with. Empty = not enforced.
+    pub expected_attestation_sha256: String,
+    /// OutLayer project (`owner/name`) and secrets profile used by `request_execution`.
+    pub outlayer_project_id: String,
+    pub outlayer_secrets_profile: String,
 }
 
 #[near]
@@ -53,6 +70,12 @@ impl AegisVault {
             policies: LookupMap::new(StorageKey::Policies),
             keepers: LookupSet::new(StorageKey::Keepers),
             locks: LookupMap::new(StorageKey::Locks),
+            positions: LookupMap::new(StorageKey::Positions),
+            tickets: LookupMap::new(StorageKey::Tickets),
+            enclave_public_key_hex: String::new(),
+            expected_attestation_sha256: String::new(),
+            outlayer_project_id: String::new(),
+            outlayer_secrets_profile: String::new(),
         }
     }
 
@@ -128,6 +151,38 @@ impl AegisVault {
         self.keepers.contains(&account_id)
     }
 
+    /// Borrower names the sub-account that holds their Burrow loan. Rescue funds may flow to and from it.
+    pub fn set_position(&mut self, position_account_id: AccountId) {
+        let owner = env::predecessor_account_id();
+        require!(self.lock_of(&owner) == RescueLock::Idle, errors::RESCUE_IN_FLIGHT);
+        self.positions.insert(owner, position_account_id);
+    }
+
+    pub fn get_position(&self, account_id: AccountId) -> Option<AccountId> {
+        self.positions.get(&account_id).cloned()
+    }
+
+    /// Owner pins the enclave signing key and the wasm hash that decisions must carry.
+    pub fn set_enclave(&mut self, public_key_hex: String, attestation_sha256: String) {
+        self.assert_owner();
+        let ok = hex::decode(&public_key_hex).is_ok_and(|b| b.len() == 32);
+        require!(ok, "ERR_BAD_ENCLAVE_KEY");
+        self.enclave_public_key_hex = public_key_hex;
+        self.expected_attestation_sha256 = attestation_sha256;
+    }
+
+    pub fn set_outlayer_project(&mut self, project_id: String, secrets_profile: String) {
+        self.assert_owner();
+        self.outlayer_project_id = project_id;
+        self.outlayer_secrets_profile = secrets_profile;
+    }
+
+    /// Emergency valve: owner frees a lock that got stuck (for example OutLayer never answered).
+    pub fn force_clear_lock(&mut self, account_id: AccountId) {
+        self.assert_owner();
+        self.locks.remove(&account_id);
+    }
+
     /// Read-only answer to "could this vault ever send this borrower's funds to `recipient`?".
     pub fn is_recipient_allowed(&self, account_id: AccountId, recipient: AccountId) -> bool {
         self.recipient_allowed(&account_id, &recipient)
@@ -135,11 +190,11 @@ impl AegisVault {
 }
 
 impl AegisVault {
-    fn lock_of(&self, account_id: &AccountId) -> RescueLock {
+    pub(crate) fn lock_of(&self, account_id: &AccountId) -> RescueLock {
         self.locks.get(account_id).cloned().unwrap_or(RescueLock::Idle)
     }
 
-    fn assert_owner(&self) {
+    pub(crate) fn assert_owner(&self) {
         require!(env::predecessor_account_id() == self.owner_id, "ERR_NOT_OWNER");
     }
 
@@ -150,6 +205,7 @@ impl AegisVault {
     /// Invariant 2: funds of `borrower` may only go to the borrower, Burrow, Ref or intents.near.
     fn recipient_allowed(&self, borrower: &AccountId, recipient: &AccountId) -> bool {
         recipient == borrower
+            || self.positions.get(borrower) == Some(recipient)
             || recipient == &self.burrow_contract_id
             || recipient == &self.ref_exchange_id
             || recipient == &self.intents_contract_id
