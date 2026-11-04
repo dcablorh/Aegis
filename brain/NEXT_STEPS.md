@@ -61,3 +61,9 @@ Done: steps 1-3 of the previous list. Remaining, in order:
 2. Deploy `aegis-position` under this vault family, set it as the borrower's position, and exercise `execute_approved_rescue` with a non-dry quote (needs the human's OK for any mainnet use; testnet has no NEAR Intents).
 3. A real Burrow debt drop (needs oracle prices or a mock).
 4. Hand testnet addresses to Developer 2; delete the Codespace when no longer needed (keys are backed up locally).
+
+## Update (live dry-run quotes work)
+Done: step 1 of the previous list. Remaining:
+1. Deploy `aegis-position` under this vault family, set it as the borrower's position, and exercise `execute_approved_rescue` with a non-dry quote. Needs the human's explicit OK and real mainnet funds (NEAR Intents has no testnet); keep amounts tiny.
+2. Real Burrow debt drop (oracle prices or a mock).
+3. Hand testnet addresses and the 1Click findings to Developer 2; delete the Codespace when no longer needed.

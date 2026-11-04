@@ -1,5 +1,18 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (live 1Click dry-run quotes)
+**Worked**
+- HTTP from the enclave via `wasi-http-client` on wasip2. End to end: vault -> OutLayer TEE -> live 1Click dry quote -> signed decision -> vault verifies -> `dry_run_quote_verified`.
+- Saved a real 1Click response as a test fixture (`enclave/aegis-wasi/tests/fixtures/1click_dry_live.json`) so the parser is tested against reality.
+
+**Failed, then fixed**
+- Design bug: 1Click's `amountIn` already includes the slippage buffer, so "spread" measured from it was always at least the borrower's own slippage limit (102 bps vs a 100 bps limit) and every rescue was refused. Now: expected cost comes from `minAmountIn` (about 1 bps) and the full `amountIn` is only the worst case, checked against the liquidation penalty saved.
+- 1Click returns HTTP 400 for a testnet account as recipient. Use a mainnet-valid address for dry price checks.
+- Quote prices move between calls (51 bps, then 102 bps worst case) so tests must not hard-code a live spread.
+
+**Lessons**
+- Test parsers against a real recorded response, not only a hand-written one.
+
 ## 2026-11-04 (first real end-to-end dry run)
 **Worked**
 - Fresh vault deployed under the `aegis-enclave-dev1` account family, new enclave version uploaded, secrets re-set with a whitelist, borrower policy registered with a real encrypted fixture. A trigger ended with `dry_run_quote_verified` after the enclave ran in OutLayer's TEE and the vault verified its signature on chain.
