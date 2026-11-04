@@ -30,3 +30,7 @@
 ## Update (M6 done)
 - Next: M7. Deploy the real vault to testnet, prove `#[private]` on the callback, set the enclave key and fingerprint, and write the final README and LICENSE.
 - Open: show a real debt drop (needs oracle prices or a mock Burrow).
+
+## Update (M7 done on testnet)
+- Next big risk: put the enclave on OutLayer (project + secrets), deliver one real answer to the callback, and fix the reply-shape assumption if it differs.
+- Then: wire live 1Click HTTP in the enclave, show a real debt drop, and hand the testnet addresses to Developer 2.

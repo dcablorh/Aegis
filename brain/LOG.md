@@ -1,5 +1,20 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (M7 testnet deploy)
+**Worked**
+- Deployed the real vault to `vault.aegis-vault-dev1.testnet` and ran live checks (see STATUS.md). `#[private]` on the callback is proven on a real network. A full trigger with a signed price reached `outlayer.testnet` and recovered cleanly when OutLayer failed.
+- Size-optimised release profile took the vault wasm from 524 KB to about 335 KB (storage on chain costs about 1 NEAR per 100 KB).
+- Added `LICENSE` (MIT), `contracts/README.md` (do X - see Y) and `.env.example`.
+
+**Failed, then fixed (important)**
+- The first deploy answered every refusal with a bare "unreachable" trap and no message. Cause: our plain `cargo build` did not set `--cfg near`, which near-sdk needs to use the real host functions (including the panic message). `cargo-near` sets it for you. Fix: `.cargo/config.toml` now sets `--cfg near` for the wasm target. After the fix the messages show (`ERR_NOT_OWNER`, `Method on_enclave_decision is private`, ...).
+- Lesson: any wasm built without that flag is **not** a faithful contract build. Always build wasm from this repo (it picks up the flag).
+- `panic = "abort"` was not the cause; it is left out of the release profile.
+
+**Still not done**
+- The enclave program is not deployed to OutLayer, so no real enclave answer has been delivered yet.
+- Real debt reduction on Burrow, and live 1Click quotes, remain unproven.
+
 ## 2026-11-04 (M6 security and invariant tests)
 **Worked**
 - `contracts/aegis-vault/tests/invariant_tests.rs`: 12 tests, grouped by the five invariants, using only public vault methods.

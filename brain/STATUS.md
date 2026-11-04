@@ -12,7 +12,7 @@ _Last updated: 2026-11-02 (Developer 1)_
 | M4 | Secret-box program (enclave): the maths and the decision | Done, in PR (needs wasm build check, see below) |
 | M5 | Handle the decision, repay on Burrow, handle refund/fail | Done in code with unit tests; not run on testnet |
 | M6 | Security attack test + one test per rule | Done, in PR |
-| M7 | Build, deploy to testnet, final docs | Not started |
+| M7 | Build, deploy to testnet, final docs | Done on testnet (vault + position); enclave not yet deployed to OutLayer |
 
 ## Tests right now
 - `aegis-types`: 7 passing.
@@ -37,7 +37,9 @@ _Last updated: 2026-11-02 (Developer 1)_
 - None. Burrow repay problem solved with per-borrower position sub-accounts (DECISIONS.md).
 
 ## Testnet accounts (free faucet funds, keys local only)
-- `aegis-vault-dev1.testnet` (stand-in vault), `alice.aegis-vault-dev1.testnet` (position, `aegis-position` deployed).
+- `vault.aegis-vault-dev1.testnet`: the real `aegis-vault`, owner and only keeper = `aegis-vault-dev1.testnet`. Oracle and enclave keys pinned are throwaway **test** keys (private halves are not in the repo).
+- `alice.aegis-vault-dev1.testnet`: the borrower and position account (`aegis-position` deployed; its vault is the dev account `aegis-vault-dev1.testnet`, not yet the vault contract).
+- Checked live: owner-only methods refuse strangers (`ERR_NOT_OWNER`); position refuses non-vault callers (`ERR_NOT_VAULT`); callback is private (`Method on_enclave_decision is private`); a signed price passes, locks the borrower, calls `outlayer.testnet`; when OutLayer fails the callback logs `RESCUE_NOT_EXECUTED:enclave_call_failed` and the lock returns to IDLE.
 
 ## Unverified assumptions (must be tested on testnet)
 - (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
