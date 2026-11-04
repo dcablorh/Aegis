@@ -14,6 +14,72 @@ pub struct QuoteRequest {
     pub recipient: String,
     pub refund_to: String,
     pub slippage_bps: u32,
+    /// Unix seconds when the request was made; the refund deadline is derived from it.
+    pub now_unix_s: u64,
+}
+
+/// How long a swap may take before 1Click starts refunding.
+const DEADLINE_SECONDS: u64 = 3600;
+
+/// `1793809700` -> `2026-11-04T16:28:20Z`. Civil-date arithmetic, no clock or time crate needed.
+pub fn iso8601_utc(secs: u64) -> String {
+    let (days, rem) = ((secs / 86_400) as i64, secs % 86_400);
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z", rem / 3600, rem % 3600 / 60, rem % 60)
+}
+
+/// The JSON body for `POST /v0/quote` (field names from the 1Click API reference).
+pub fn build_request_body(req: &QuoteRequest) -> String {
+    serde_json::json!({
+        "dry": req.dry,
+        "swapType": "EXACT_OUTPUT",
+        "slippageTolerance": req.slippage_bps,
+        "originAsset": req.origin_asset,
+        "depositType": "ORIGIN_CHAIN",
+        "destinationAsset": req.destination_asset,
+        "amount": req.amount_out_raw,
+        "refundTo": req.refund_to,
+        "refundType": "ORIGIN_CHAIN",
+        "recipient": req.recipient,
+        "recipientType": "DESTINATION_CHAIN",
+        "deadline": iso8601_utc(req.now_unix_s + DEADLINE_SECONDS),
+    })
+    .to_string()
+}
+
+/// Live 1Click over HTTP. Only exists inside the wasip2 sandbox (OutLayer), where outbound HTTP is allowed.
+#[cfg(target_os = "wasi")]
+pub struct HttpQuote {
+    pub url: String,
+}
+
+#[cfg(target_os = "wasi")]
+impl QuoteSource for HttpQuote {
+    fn fetch(&self, req: &QuoteRequest) -> Result<String, String> {
+        let body = build_request_body(req);
+        let resp = wasi_http_client::Client::new()
+            .post(&self.url)
+            .header("Content-Type", "application/json")
+            .body(body.as_bytes())
+            .connect_timeout(std::time::Duration::from_secs(8))
+            .send()
+            .map_err(|e| format!("1click request failed: {e}"))?;
+        let status = resp.status();
+        let bytes = resp.body().map_err(|e| format!("1click body failed: {e}"))?;
+        let text = String::from_utf8_lossy(&bytes).into_owned();
+        if !(200..300).contains(&status) {
+            return Err(format!("1click http {status}: {}", text.chars().take(200).collect::<String>()));
+        }
+        Ok(text)
+    }
 }
 
 /// Where the raw 1Click JSON comes from. Live HTTP and offline fixtures both implement it.
@@ -126,6 +192,36 @@ pub fn sample_json(dry: bool, amount_in_usd: &str, amount_out: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn iso_timestamps() {
+        assert_eq!(iso8601_utc(0), "1970-01-01T00:00:00Z");
+        assert_eq!(iso8601_utc(951_782_400), "2000-02-29T00:00:00Z"); // leap day
+        assert_eq!(iso8601_utc(1_793_809_700), "2026-11-04T16:28:20Z");
+    }
+
+    #[test]
+    fn request_body_matches_the_1click_reference() {
+        let req = QuoteRequest {
+            dry: true,
+            origin_asset: "nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near".into(),
+            destination_asset: "nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1".into(),
+            amount_out_raw: "345600000".into(),
+            recipient: "intents.near".into(),
+            refund_to: "0x2527D02599Ba641c19FEa793cD0F167589a0f10D".into(),
+            slippage_bps: 100,
+            now_unix_s: 1_793_809_700,
+        };
+        let v: serde_json::Value = serde_json::from_str(&build_request_body(&req)).unwrap();
+        assert_eq!(v["dry"], true);
+        assert_eq!(v["swapType"], "EXACT_OUTPUT");
+        assert_eq!(v["slippageTolerance"], 100);
+        assert_eq!(v["amount"], "345600000");
+        assert_eq!(v["depositType"], "ORIGIN_CHAIN");
+        assert_eq!(v["recipientType"], "DESTINATION_CHAIN");
+        assert_eq!(v["deadline"], "2026-11-04T17:28:20Z");
+        assert_eq!(v.as_object().unwrap().len(), 12);
+    }
 
     #[test]
     fn usd_parsing() {

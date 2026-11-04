@@ -2,7 +2,7 @@
 //!   policy_commitment_hash_hex, encrypted_payload_base64  -> for the vault's `register_policy`
 //!   quote_json                                            -> the offline 1Click response for the AEGIS_QUOTE_JSON secret
 //!
-//! Usage: ENCLAVE_POLICY_PUB_HEX=<64 hex> cargo run -p aegis-wasi --example e2e_fixture
+//! Usage: ENCLAVE_POLICY_PUB_HEX=<64 hex> [MAX_SLIPPAGE_BPS=100] cargo run -p aegis-wasi --example e2e_fixture
 //!
 //! The ephemeral key, nonce and salt come from the clock. That is fine for a test fixture and not for real policies.
 
@@ -21,7 +21,7 @@ fn main() {
     let policy = PolicyPlaintext {
         hf_min_bps: 10_800,
         hf_target_bps: 12_500,
-        max_slippage_bps: 35,
+        max_slippage_bps: std::env::var("MAX_SLIPPAGE_BPS").ok().and_then(|v| v.parse().ok()).unwrap_or(35),
         salt_hex: hex::encode(&entropy("salt")[..8]),
     };
     let nonce: [u8; 12] = entropy("nonce")[..12].try_into().unwrap();

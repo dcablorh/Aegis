@@ -123,6 +123,7 @@ pub fn decide(
         recipient: cfg.recipient.clone(),
         refund_to: cfg.refund_to.clone(),
         slippage_bps: policy.max_slippage_bps,
+        now_unix_s: input.now_unix_s,
     };
     let raw = quotes.fetch(&req).map_err(DecideError::Quote)?;
     let saved = math::penalty_saved_bps(h.hf_bps) as u32;
