@@ -208,6 +208,20 @@ mod tests {
     }
 
     #[test]
+    fn signed_decision_fits_outlayer_900_byte_output_limit() {
+        // OutLayer truncates stdout above 900 bytes, which would break the JSON the vault has to parse.
+        let (d, _) = decide(&input(10_800, 35), &cfg(), &quotes("345.95")).unwrap();
+        let mut d = d;
+        // worst realistic case: long 1Click correlation id and a 64-char implicit-account deposit address
+        let q = d.oneclick_quote.as_mut().unwrap();
+        q.quote_id = "x".repeat(36);
+        q.deposit_address = "a".repeat(64);
+        let len = serde_json::to_string(&d).unwrap().len();
+        println!("decision json bytes: {len}");
+        assert!(len <= 900, "decision is {len} bytes");
+    }
+
+    #[test]
     fn decision_is_signed_by_the_enclave_key() {
         let (d, _) = decide(&input(10_800, 35), &cfg(), &quotes("345.95")).unwrap();
         let sig = Signature::from_slice(&hex::decode(&d.enclave_signature_hex).unwrap()).unwrap();

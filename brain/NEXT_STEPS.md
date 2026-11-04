@@ -34,3 +34,8 @@
 ## Update (M7 done on testnet)
 - Next big risk: put the enclave on OutLayer (project + secrets), deliver one real answer to the callback, and fix the reply-shape assumption if it differs.
 - Then: wire live 1Click HTTP in the enclave, show a real debt drop, and hand the testnet addresses to Developer 2.
+
+## Update (OutLayer prep done, nothing spent)
+1. With the human's OK: upload the enclave wasm, create the project `aegis-vault-dev1.testnet/aegis`, set secrets (about 0.1 NEAR plus a refundable project deposit; each run about 0.007 NEAR).
+2. Move the enclave to wasm32-wasip2 and add live 1Click quotes through `wasi-http-client`.
+3. Deliver one real enclave answer to the vault callback and fix the reply-shape assumption if needed.
