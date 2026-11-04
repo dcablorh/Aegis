@@ -1,5 +1,21 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (first real end-to-end dry run)
+**Worked**
+- Fresh vault deployed under the `aegis-enclave-dev1` account family, new enclave version uploaded, secrets re-set with a whitelist, borrower policy registered with a real encrypted fixture. A trigger ended with `dry_run_quote_verified` after the enclave ran in OutLayer's TEE and the vault verified its signature on chain.
+
+**Failed, then fixed (three real bugs found by running it)**
+1. `/tmp` in the Codespace is wiped when it shuts down, so saved keys vanished. Keep secrets under the home folder and back them up.
+2. The first versions were refused with "Access denied by access condition": OutLayer evaluates the secret whitelist against the transaction **signer** (the keeper), not just the calling contract. The whitelist now has both.
+3. The vault sent empty OutLayer limits (`{}`), which the worker rejected ("Execution promise failed"). The vault now sends explicit limits (1 billion instructions, 128 MB, 10 s). This was invisible in unit tests.
+
+**Lessons**
+- Unit tests cannot find integration mistakes like these; only a real run did. Keep at least one live smoke test in the checklist.
+- The Codespace holds the only copy of some testnet keys; they are now also backed up locally (outside the repo) in `~/aegis-codespace-backup` and `~/.near-credentials/testnet`.
+
+**Still not done**
+- Live 1Click quotes (the quote is a saved dry-run), real money movement, position-account execution against this vault, and a real Burrow debt drop.
+
 ## 2026-11-04 (OutLayer project created, via Codespace)
 **Worked**
 - Local install of `outlayer-cli` failed twice: the disk is nearly full (1.3 GB free) and a compile ran out of space. The human approved doing it in a GitHub Codespace instead.

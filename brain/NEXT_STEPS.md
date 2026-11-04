@@ -54,3 +54,10 @@ Still to do, in order:
 2. Upload the rebuilt enclave wasm, `outlayer deploy aegis <url>` (new version), then re-set ALL secrets (it overwrites): add `AEGIS_QUOTE_JSON` from `e2e_fixture`, update `AEGIS_ATTESTATION_SHA256` to the new hash, use `--access whitelist:vault.aegis-enclave-dev1.testnet`. Seeds are in `/tmp/sign_seed` and `/tmp/policy_seed` there.
 3. Borrower `register_policy` with the fixture output; trigger with a fresh signed feed (HF 1.07 example: wrap.testnet 1000 at 4.28, usdc.fakes.testnet 2400 at 1.00); expect event `RESCUE_NOT_EXECUTED:dry_run_quote_verified`.
 4. Delete the Codespace: `gh codespace delete -c aegis-outlayer-wr97vp6v99qx2g7q4`.
+
+## Update (end-to-end dry run works)
+Done: steps 1-3 of the previous list. Remaining, in order:
+1. Live 1Click quotes inside the enclave (`wasi-http-client`, wasip2), still `dry: true`.
+2. Deploy `aegis-position` under this vault family, set it as the borrower's position, and exercise `execute_approved_rescue` with a non-dry quote (needs the human's OK for any mainnet use; testnet has no NEAR Intents).
+3. A real Burrow debt drop (needs oracle prices or a mock).
+4. Hand testnet addresses to Developer 2; delete the Codespace when no longer needed (keys are backed up locally).

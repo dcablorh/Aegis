@@ -15,6 +15,10 @@ use near_sdk::{
 use crate::oracle::token_account_of;
 use crate::{AegisVault, AegisVaultExt};
 
+/// Explicit OutLayer limits. Empty limits (`{}`) made the worker fail on testnet; the enclave uses about 10 million instructions.
+const ENCLAVE_MAX_INSTRUCTIONS: u64 = 1_000_000_000;
+const ENCLAVE_MAX_MEMORY_MB: u32 = 128;
+const ENCLAVE_MAX_SECONDS: u64 = 10;
 const REQUEST_GAS: Gas = Gas::from_tgas(100);
 const CALLBACK_GAS: Gas = Gas::from_tgas(30);
 const POSITION_SEND_GAS: Gas = Gas::from_tgas(60);
@@ -75,7 +79,7 @@ impl AegisVault {
         };
         let args = serde_json::json!({
             "source": { "Project": { "project_id": self.outlayer_project_id, "version_key": null } },
-            "resource_limits": {},
+            "resource_limits": { "max_instructions": ENCLAVE_MAX_INSTRUCTIONS, "max_memory_mb": ENCLAVE_MAX_MEMORY_MB, "max_execution_seconds": ENCLAVE_MAX_SECONDS },
             "input_data": serde_json::to_string(&input).unwrap(),
             "secrets_ref": { "profile": self.outlayer_secrets_profile, "account_id": self.outlayer_secrets_account_id },
             "response_format": "Json",

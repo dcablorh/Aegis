@@ -51,6 +51,14 @@ _Last updated: 2026-11-02 (Developer 1)_
   2. Secrets were stored with `--access allow-all`. Tighten to a whitelist of the vault contract account.
   3. The enclave has no way to get a swap quote inside OutLayer yet (no live HTTP, no offline source), so it exits with an error. Add an offline quote secret for the first run, then live `wasi-http-client`.
 
+## First real end-to-end run on testnet (2026-11-04)  [DRY-RUN QUOTE, no money moved]
+- Vault: `vault.aegis-enclave-dev1.testnet` (owner and keeper `aegis-enclave-dev1.testnet`, borrower `borrower1.aegis-enclave-dev1.testnet`). OutLayer project `aegis-enclave-dev1.testnet/aegis`, enclave wasm sha256 `60e8d5819ff52845a48c7f04e83f6177adff2545cacadaa3b0a04bdbcd0fa2d5` (active version).
+- Result: a keeper trigger with a signed price feed ran the enclave inside OutLayer's TEE. The enclave returned a signed `REPAY_DEBT` for 345.60 USDC (health 1.07, trigger 1.08). The vault verified the Ed25519 signature on chain against the pinned enclave key, checked the program fingerprint, saw the quote was a dry run and freed the lock: `AEGIS_EVENT:RESCUE_NOT_EXECUTED:dry_run_quote_verified`.
+- **OutLayer's reply shape is confirmed:** the callback receives the decision as a plain JSON object (631 bytes). The vault already accepted that.
+- Public key borrowers encrypt to (X25519, this deployment): `8ebeed88c4469461017e19489ef7679a743ce531612d71f0565220c4a894c215`.
+- Secrets access is a whitelist of the keeper account and the vault. OutLayer checks the **signer** of the transaction, not only the calling contract.
+- The old `vault.aegis-vault-dev1.testnet` and `alice...` are the earlier test deployment (old state layout); keep for reference or delete.
+
 ## Unverified assumptions (must be tested on testnet)
 - (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
 - The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).
