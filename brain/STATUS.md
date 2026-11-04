@@ -11,13 +11,13 @@ _Last updated: 2026-11-02 (Developer 1)_
 | M3 | Price check + start-a-rescue + lock | Done, in PR (needs real OutLayer test) |
 | M4 | Secret-box program (enclave): the maths and the decision | Done, in PR (needs wasm build check, see below) |
 | M5 | Handle the decision, repay on Burrow, handle refund/fail | Done in code with unit tests; not run on testnet |
-| M6 | Security attack test + one test per rule | Not started |
+| M6 | Security attack test + one test per rule | Done, in PR |
 | M7 | Build, deploy to testnet, final docs | Not started |
 
 ## Tests right now
 - `aegis-types`: 7 passing.
 - `aegis-wasi` (enclave): 27 passing.
-- `aegis-vault`: 35 passing (policy, keepers, oracle, rescue lifecycle, attack cases).
+- `aegis-vault`: 35 unit + 12 invariant + 2 attack-simulation tests passing.
 - `aegis-position`: 7 passing.
 
 ## Open pull requests
