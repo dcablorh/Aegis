@@ -104,6 +104,8 @@ pub enum QuoteError {
     BadAmount,
     /// Solver would deliver less than the amount we need.
     ShortDelivery,
+    /// Even the worst case (full slippage used) costs at least as much as the liquidation penalty avoided.
+    WorstCaseTooCostly,
 }
 
 #[derive(Deserialize)]
@@ -126,6 +128,9 @@ struct Quote {
     deposit_address: Option<String>,
     #[serde(rename = "amountIn")]
     amount_in: String,
+    /// What the swap is expected to cost without the slippage buffer. Older/other responses may omit it.
+    #[serde(rename = "minAmountIn", default)]
+    min_amount_in: Option<String>,
     #[serde(rename = "amountInUsd")]
     amount_in_usd: String,
     #[serde(rename = "amountOut")]
@@ -166,10 +171,20 @@ pub fn check_quote(
     }
     let usd_in = parse_usd_micro(&r.quote.amount_in_usd).ok_or(QuoteError::BadAmount)?;
     let usd_out = parse_usd_micro(&r.quote.amount_out_usd).ok_or(QuoteError::BadAmount)?;
-    if usd_out == 0 {
+    if usd_out == 0 || _in == 0 {
         return Err(QuoteError::BadAmount);
     }
-    let spread = (usd_in.saturating_sub(usd_out) * 10_000 / usd_out).min(u32::MAX as u128) as u32;
+    // `amountIn` already contains the slippage buffer, so it is the worst case. The expected cost uses `minAmountIn`.
+    let min_in: u128 = match &r.quote.min_amount_in {
+        Some(m) => m.parse().map_err(|_| QuoteError::BadAmount)?,
+        None => _in,
+    };
+    let usd_expected = usd_in.saturating_mul(min_in.min(_in)) / _in;
+    let bps = |usd: u128| (usd.saturating_sub(usd_out) * 10_000 / usd_out).min(u32::MAX as u128) as u32;
+    let (spread, worst) = (bps(usd_expected), bps(usd_in));
+    if worst >= penalty_saved_bps {
+        return Err(QuoteError::WorstCaseTooCostly);
+    }
     Ok(OneClickQuotePayload {
         quote_id: r.correlation_id,
         dry: expect_dry,
@@ -242,14 +257,26 @@ mod tests {
     #[test]
     fn live_quote_needs_deposit_address() {
         assert_eq!(check_quote(&sample_json(true, "345.95", "345600000"), false, 1, 0), Err(QuoteError::DryMismatch));
-        let q = check_quote(&sample_json(false, "345.95", "345600000"), false, 345_600_000, 0).unwrap();
+        let q = check_quote(&sample_json(false, "345.95", "345600000"), false, 345_600_000, 720).unwrap();
         assert_eq!(q.deposit_address, "dep123");
+    }
+
+    #[test]
+    fn real_live_response_is_parsed_and_costed_from_min_amount_in() {
+        let raw = include_str!("../tests/fixtures/1click_dry_live.json");
+        let q = check_quote(raw, true, 345_600_000, 720).unwrap();
+        assert!(q.dry && q.deposit_address == "dry_run");
+        assert_eq!(q.amount_out, "345600000");
+        // expected cost is a few bps; the 1% slippage buffer must not be counted as a fee
+        assert!(q.solver_spread_bps <= 10, "{}", q.solver_spread_bps);
+        // but the worst case is still checked against the penalty saved
+        assert_eq!(check_quote(raw, true, 345_600_000, 100), Err(QuoteError::WorstCaseTooCostly));
     }
 
     #[test]
     fn short_delivery_is_rejected() {
         assert_eq!(
-            check_quote(&sample_json(true, "345.95", "345599999"), true, 345_600_000, 0),
+            check_quote(&sample_json(true, "345.95", "345599999"), true, 345_600_000, 720),
             Err(QuoteError::ShortDelivery)
         );
     }
