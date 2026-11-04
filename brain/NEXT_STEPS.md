@@ -26,3 +26,7 @@
 ## Update (spike)
 - Decide how to show a real debt drop: wait for testnet prices, run a mock-price Burrow, or a tiny mainnet test (needs human OK).
 - Still untested: OutLayer's real reply shape (needs a deployed OutLayer project and the enclave wasm).
+
+## Update (M6 done)
+- Next: M7. Deploy the real vault to testnet, prove `#[private]` on the callback, set the enclave key and fingerprint, and write the final README and LICENSE.
+- Open: show a real debt drop (needs oracle prices or a mock Burrow).

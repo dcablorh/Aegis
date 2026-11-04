@@ -1,5 +1,18 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (M6 security and invariant tests)
+**Worked**
+- `contracts/aegis-vault/tests/invariant_tests.rs`: 12 tests, grouped by the five invariants, using only public vault methods.
+- `contracts/aegis-vault/tests/security_attack_sim.rs`: a compromised keeper tries 12 attacks (redirect money, forge or tamper with the enclave answer, replay an old answer, grab admin powers, fake a SUCCESS, execute twice). All refused. Read the audit log with `cargo test -p aegis-vault --test security_attack_sim -- --nocapture`.
+
+**Failed, then fixed**
+- First storage-privacy test saw an empty storage: the toolkit's collections only write when dropped. The test now drops the vault first, as the runtime does at the end of a call.
+- My first "replay" attack reused the same request id by accident (the test random seed is fixed), so it proved nothing. Now the second rescue uses a different seed and the test checks the ids differ.
+
+**Not covered by these tests**
+- That only the vault itself can call the enclave callback (`#[private]`). That check lives in the compiled contract entry point, so it can only be proven on testnet.
+- `near-workspaces` (full sandbox) was not used: it does not run on Windows.
+
 ## 2026-11-02 (live testnet spike: position -> Burrow)
 **Setup (testnet only, free faucet funds, keys stay in `~/.near-credentials`, never in the repo)**
 - `aegis-vault-dev1.testnet` stands in for the vault (10 NEAR from the faucet).
