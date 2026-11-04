@@ -17,3 +17,5 @@
 | 2026-11-02 | A swap deposit address is allowed only while it sits inside the borrower's in-flight signed ticket | Keeps the "no arbitrary recipient" rule while still paying a different address each time. |
 | 2026-11-02 | The enclave callback never panics once the lock is ours; bad answers free the lock and log a reason | A panic would roll the lock back and leave it stuck. |
 | 2026-11-02 | A lying keeper cannot redirect money: `report_intent_status` only moves a capped repay amount from the borrower's own position to Burrow | The keeper reports swap outcomes, so its power must be limited. |
+| 2026-11-04 | Plan to move the enclave build to wasm32-wasip2 for live 1Click quotes | OutLayer only allows outbound HTTP from wasip2 programs. |
+| 2026-11-04 | Consider an auto-generated (`PROTECTED_*`) Ed25519 signing key instead of a hand-made one | Nobody, including us, would ever see the private key; the public half still has to be read out and pinned in the vault. |

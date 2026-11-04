@@ -1,5 +1,22 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (OutLayer project created, via Codespace)
+**Worked**
+- Local install of `outlayer-cli` failed twice: the disk is nearly full (1.3 GB free) and a compile ran out of space. The human approved doing it in a GitHub Codespace instead.
+- In the Codespace: installed Rust and `outlayer-cli` 0.2.1 (about 8 minutes), built the enclave for `wasm32-wasip2` (335 KB), created a fresh throwaway testnet account (so no existing key left this machine), logged in, uploaded the wasm, created the project and stored the secrets.
+
+**Not done / found**
+- Three mismatches listed in STATUS.md stop a real end-to-end run.
+- The Codespace is set to stop after 30 idle minutes and be removed 24 hours after that. Delete it sooner with `gh codespace delete -c aegis-outlayer-wr97vp6v99qx2g7q4`.
+
+## 2026-11-04 (OutLayer preparation, nothing spent)
+**Read the OutLayer docs (app.outlayer.ai/docs: projects, secrets, wasi, pricing)**
+- Output limit is **900 bytes**. Our worst-case signed decision is 686 bytes (new test guards this).
+- Outbound HTTP from the program needs the **wasm32-wasip2** target and the `wasi-http-client` crate. Our program currently builds for wasip1 (no HTTP). A wasip2 build of it already compiles (about 335 KB).
+- A project is created from a WASM URL plus its SHA-256 (`outlayer upload`, then dashboard "New Project" or `outlayer deploy`). Project id format is `owner_account/name`. A project has a refundable storage deposit. Secrets are encrypted in the browser and exposed to the program as environment variables; auto-generated secrets (for example an Ed25519 key made inside the TEE) are named `PROTECTED_*`.
+- Estimated cost of one run on testnet from the view call `estimate_execution_cost`: 0.007 NEAR (1 billion instructions, 60 s).
+- Docs do not say: the project deposit amount, whether the dashboard supports testnet, or secret size limits. Failed runs are not refunded.
+
 ## 2026-11-04 (M7 testnet deploy)
 **Worked**
 - Deployed the real vault to `vault.aegis-vault-dev1.testnet` and ran live checks (see STATUS.md). `#[private]` on the callback is proven on a real network. A full trigger with a signed price reached `outlayer.testnet` and recovered cleanly when OutLayer failed.
