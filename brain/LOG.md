@@ -1,5 +1,14 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (OutLayer project created, via Codespace)
+**Worked**
+- Local install of `outlayer-cli` failed twice: the disk is nearly full (1.3 GB free) and a compile ran out of space. The human approved doing it in a GitHub Codespace instead.
+- In the Codespace: installed Rust and `outlayer-cli` 0.2.1 (about 8 minutes), built the enclave for `wasm32-wasip2` (335 KB), created a fresh throwaway testnet account (so no existing key left this machine), logged in, uploaded the wasm, created the project and stored the secrets.
+
+**Not done / found**
+- Three mismatches listed in STATUS.md stop a real end-to-end run.
+- The Codespace is set to stop after 30 idle minutes and be removed 24 hours after that. Delete it sooner with `gh codespace delete -c aegis-outlayer-wr97vp6v99qx2g7q4`.
+
 ## 2026-11-04 (OutLayer preparation, nothing spent)
 **Read the OutLayer docs (app.outlayer.ai/docs: projects, secrets, wasi, pricing)**
 - Output limit is **900 bytes**. Our worst-case signed decision is 686 bytes (new test guards this).

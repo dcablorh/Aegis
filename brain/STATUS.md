@@ -41,6 +41,16 @@ _Last updated: 2026-11-02 (Developer 1)_
 - `alice.aegis-vault-dev1.testnet`: the borrower and position account (`aegis-position` deployed; its vault is the dev account `aegis-vault-dev1.testnet`, not yet the vault contract).
 - Checked live: owner-only methods refuse strangers (`ERR_NOT_OWNER`); position refuses non-vault callers (`ERR_NOT_VAULT`); callback is private (`Method on_enclave_decision is private`); a signed price passes, locks the borrower, calls `outlayer.testnet`; when OutLayer fails the callback logs `RESCUE_NOT_EXECUTED:enclave_call_failed` and the lock returns to IDLE.
 
+## OutLayer (testnet), created 2026-11-04 from a GitHub Codespace
+- Project: `aegis-enclave-dev1.testnet/aegis`. Wasm built for `wasm32-wasip2`, sha256 `2740d0786eda65b9236f8ed34f121646a5facda266e932c1f87dca7bc337ce46`, stored on FastFS: `https://test.fastfs.io/aegis-enclave-dev1.testnet/outlayer.testnet/2740d0786eda65b9236f8ed34f121646a5facda266e932c1f87dca7bc337ce46.wasm`.
+- Secrets stored under profile `default` (values live only in OutLayer and the Codespace, never in the repo): policy decryption key, enclave signing seed (same test key the vault pins), oracle public key, attestation hash, recipient, refund address, `AEGIS_LIVE=0`.
+- Public key borrowers encrypt their policy to (X25519): `8cbe8e0e1d72afebfa4e25215bcb95520f93566628b25e7a4d54a6e56f9caf1e`.
+- Spend so far: about 0.02 NEAR of free testnet funds. The signing account `aegis-enclave-dev1.testnet` has about 9.98 NEAR left; its key exists only inside the Codespace.
+- **Known mismatches before a real end-to-end run:**
+  1. The vault passes its own `owner_id` (`aegis-vault-dev1.testnet`) as the secrets owner, but the secrets belong to `aegis-enclave-dev1.testnet`. Fix: add a secrets-account setting to the vault (needs a fresh deploy because stored state changes), or redeploy the vault under the `aegis-enclave-dev1` account family.
+  2. Secrets were stored with `--access allow-all`. Tighten to a whitelist of the vault contract account.
+  3. The enclave has no way to get a swap quote inside OutLayer yet (no live HTTP, no offline source), so it exits with an error. Add an offline quote secret for the first run, then live `wasi-http-client`.
+
 ## Unverified assumptions (must be tested on testnet)
 - (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
 - The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).

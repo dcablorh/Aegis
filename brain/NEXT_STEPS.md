@@ -39,3 +39,9 @@
 1. With the human's OK: upload the enclave wasm, create the project `aegis-vault-dev1.testnet/aegis`, set secrets (about 0.1 NEAR plus a refundable project deposit; each run about 0.007 NEAR).
 2. Move the enclave to wasm32-wasip2 and add live 1Click quotes through `wasi-http-client`.
 3. Deliver one real enclave answer to the vault callback and fix the reply-shape assumption if needed.
+
+## Update (OutLayer project exists)
+1. Make the vault take a separate secrets-account (or redeploy it under `aegis-enclave-dev1`), tighten secret access to the vault account.
+2. Give the enclave an offline quote secret (`AEGIS_QUOTE_JSON`) for a first dry run, then live quotes via `wasi-http-client`.
+3. Trigger from the vault and confirm OutLayer's real reply shape reaches `on_enclave_decision`.
+4. Delete the Codespace when finished.
