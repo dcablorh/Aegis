@@ -51,7 +51,7 @@ pub fn vault() -> AegisVault {
     let pinned = format!("ed25519:{}", near_sdk::bs58::encode(oracle_key().verifying_key().to_bytes()).into_string());
     let mut v = AegisVault::new(id("admin.near"), pinned, id("burrow.near"), id("ref.near"), id("outlayer.near"), id("intents.near"));
     v.set_enclave(hex::encode(enclave_key().verifying_key().to_bytes()), "cd".repeat(32));
-    v.set_outlayer_project("admin.near/aegis".into(), "default".into());
+    v.set_outlayer_project("admin.near/aegis".into(), "default".into(), "admin.near".into());
     v.register_keeper(id("keeper.near"));
     at("alice.near", 1000);
     v.register_policy("ab".repeat(32), "Y2lwaGVy".into(), vec!["nep141:base-usdc.omft.near".into()], "nep141:usdc.near".into());

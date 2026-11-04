@@ -45,3 +45,12 @@
 2. Give the enclave an offline quote secret (`AEGIS_QUOTE_JSON`) for a first dry run, then live quotes via `wasi-http-client`.
 3. Trigger from the vault and confirm OutLayer's real reply shape reaches `on_enclave_decision`.
 4. Delete the Codespace when finished.
+
+## Update (2026-11-04, usage limit reached mid-task; resume here)
+Done: PR #9 (`dev1/e2e-dry-run`) has the vault secrets-account setting, the enclave `AEGIS_QUOTE_JSON` secret and the `e2e_fixture` tool. All tests pass.
+In progress in Codespace `aegis-outlayer-wr97vp6v99qx2g7q4` (files copied there by hand, git fetch fails there): `npm install -g near-cli-rs` and builds of the vault wasm and enclave wasip2 (log: `/tmp/build2.log`, `/tmp/npm-near.log`).
+Still to do, in order:
+1. In the Codespace: create `vault.aegis-enclave-dev1.testnet` (about 4 NEAR) and a borrower sub-account; deploy the new vault wasm; `new` with owner `aegis-enclave-dev1.testnet`; `set_enclave` (key `51059e47...b63c` and the NEW enclave wasm hash); `set_outlayer_project("aegis-enclave-dev1.testnet/aegis","default","aegis-enclave-dev1.testnet")`; register keeper.
+2. Upload the rebuilt enclave wasm, `outlayer deploy aegis <url>` (new version), then re-set ALL secrets (it overwrites): add `AEGIS_QUOTE_JSON` from `e2e_fixture`, update `AEGIS_ATTESTATION_SHA256` to the new hash, use `--access whitelist:vault.aegis-enclave-dev1.testnet`. Seeds are in `/tmp/sign_seed` and `/tmp/policy_seed` there.
+3. Borrower `register_policy` with the fixture output; trigger with a fresh signed feed (HF 1.07 example: wrap.testnet 1000 at 4.28, usdc.fakes.testnet 2400 at 1.00); expect event `RESCUE_NOT_EXECUTED:dry_run_quote_verified`.
+4. Delete the Codespace: `gh codespace delete -c aegis-outlayer-wr97vp6v99qx2g7q4`.

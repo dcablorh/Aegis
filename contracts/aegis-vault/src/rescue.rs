@@ -46,7 +46,10 @@ impl AegisVault {
         price_history: Vec<OraclePricePayload>,
     ) -> Promise {
         self.assert_authorized_keeper(&env::predecessor_account_id());
-        require!(!self.outlayer_project_id.is_empty(), "ERR_OUTLAYER_NOT_CONFIGURED");
+        require!(
+            !self.outlayer_project_id.is_empty() && !self.outlayer_secrets_account_id.is_empty(),
+            "ERR_OUTLAYER_NOT_CONFIGURED"
+        );
         require!(!self.enclave_public_key_hex.is_empty(), "ERR_ENCLAVE_NOT_CONFIGURED");
         let policy = self.policies.get(&account_id).cloned().unwrap_or_else(|| env::panic_str("ERR_NO_POLICY"));
         require!(self.lock_of(&account_id) == RescueLock::Idle, errors::RESCUE_IN_FLIGHT);
@@ -74,7 +77,7 @@ impl AegisVault {
             "source": { "Project": { "project_id": self.outlayer_project_id, "version_key": null } },
             "resource_limits": {},
             "input_data": serde_json::to_string(&input).unwrap(),
-            "secrets_ref": { "profile": self.outlayer_secrets_profile, "account_id": self.owner_id },
+            "secrets_ref": { "profile": self.outlayer_secrets_profile, "account_id": self.outlayer_secrets_account_id },
             "response_format": "Json",
         });
         Promise::new(self.outlayer_contract_id.clone())

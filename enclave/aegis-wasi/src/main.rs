@@ -7,9 +7,10 @@
 //!   AEGIS_ATTESTATION_SHA256    sha256 of this wasm binary
 //!   AEGIS_RECIPIENT, AEGIS_REFUND_TO
 //!   AEGIS_LIVE=1                request a real (non-dry) 1Click quote
+//!   AEGIS_QUOTE_JSON=<json>     offline run: the 1Click response itself (works as an OutLayer secret)
 //!   AEGIS_QUOTE_FIXTURE=<path>  offline run: read the 1Click response from a file
 //!
-//! Live 1Click HTTP from inside the sandbox is not wired yet: without AEGIS_QUOTE_FIXTURE the run fails loudly.
+//! Live 1Click HTTP from inside the sandbox is not wired yet: without AEGIS_QUOTE_JSON or AEGIS_QUOTE_FIXTURE the run fails loudly.
 
 use aegis_types::EnclaveExecutionInput;
 use aegis_wasi::quote::{FixtureQuote, QuoteRequest, QuoteSource};
@@ -21,7 +22,7 @@ struct NoNetwork;
 
 impl QuoteSource for NoNetwork {
     fn fetch(&self, _: &QuoteRequest) -> Result<String, String> {
-        Err("live 1Click HTTP is not wired yet; set AEGIS_QUOTE_FIXTURE for an offline run".into())
+        Err("live 1Click HTTP is not wired yet; set AEGIS_QUOTE_JSON or AEGIS_QUOTE_FIXTURE for an offline run".into())
     }
 }
 
@@ -49,9 +50,12 @@ fn run() -> Result<String, String> {
         refund_to: env("AEGIS_REFUND_TO")?,
         live: std::env::var("AEGIS_LIVE").is_ok_and(|v| v == "1"),
     };
-    let source: Box<dyn QuoteSource> = match std::env::var("AEGIS_QUOTE_FIXTURE") {
-        Ok(path) => Box::new(FixtureQuote(std::fs::read_to_string(path).map_err(|e| e.to_string())?)),
-        Err(_) => Box::new(NoNetwork),
+    let source: Box<dyn QuoteSource> = if let Ok(json) = std::env::var("AEGIS_QUOTE_JSON") {
+        Box::new(FixtureQuote(json))
+    } else if let Ok(path) = std::env::var("AEGIS_QUOTE_FIXTURE") {
+        Box::new(FixtureQuote(std::fs::read_to_string(path).map_err(|e| e.to_string())?))
+    } else {
+        Box::new(NoNetwork)
     };
     let (decision, reason) = decide(&input, &cfg, source.as_ref()).map_err(|e| format!("{e:?}"))?;
     eprintln!("aegis-wasi: {reason:?}");

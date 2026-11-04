@@ -47,6 +47,8 @@ pub struct AegisVault {
     /// OutLayer project (`owner/name`) and secrets profile used by `request_execution`.
     pub outlayer_project_id: String,
     pub outlayer_secrets_profile: String,
+    /// Account that owns the OutLayer secrets (not necessarily the vault owner).
+    pub outlayer_secrets_account_id: String,
 }
 
 #[near]
@@ -76,6 +78,7 @@ impl AegisVault {
             expected_attestation_sha256: String::new(),
             outlayer_project_id: String::new(),
             outlayer_secrets_profile: String::new(),
+            outlayer_secrets_account_id: String::new(),
         }
     }
 
@@ -171,10 +174,11 @@ impl AegisVault {
         self.expected_attestation_sha256 = attestation_sha256;
     }
 
-    pub fn set_outlayer_project(&mut self, project_id: String, secrets_profile: String) {
+    pub fn set_outlayer_project(&mut self, project_id: String, secrets_profile: String, secrets_account_id: String) {
         self.assert_owner();
         self.outlayer_project_id = project_id;
         self.outlayer_secrets_profile = secrets_profile;
+        self.outlayer_secrets_account_id = secrets_account_id;
     }
 
     /// Emergency valve: owner frees a lock that got stuck (for example OutLayer never answered).
