@@ -9,7 +9,7 @@ pub mod quote;
 
 use aegis_types::{EnclaveExecutionInput, EnclaveRescueDecision, RescueAction};
 use ed25519_dalek::SigningKey;
-use quote::{QuoteError, QuoteRequest, QuoteSource};
+use quote::{QuoteRequest, QuoteSource};
 
 /// Secrets and settings the enclave receives from OutLayer as environment variables.
 pub struct EnclaveConfig {
@@ -123,6 +123,7 @@ pub fn decide(
         recipient: cfg.recipient.clone(),
         refund_to: cfg.refund_to.clone(),
         slippage_bps: policy.max_slippage_bps,
+        now_unix_s: input.now_unix_s,
     };
     let raw = quotes.fetch(&req).map_err(DecideError::Quote)?;
     let saved = math::penalty_saved_bps(h.hf_bps) as u32;
@@ -134,7 +135,7 @@ pub fn decide(
         }
     };
     if q.solver_spread_bps > policy.max_slippage_bps || q.solver_spread_bps >= saved {
-        let why = Reason::QuoteRejected(format!("{:?}", QuoteError::ShortDelivery).replace("ShortDelivery", "SpreadTooHigh"));
+        let why = Reason::QuoteRejected("SpreadTooHigh".into());
         return finish(none_decision(input, h.hf_bps, trigger, policy.hf_target_bps), why);
     }
 
