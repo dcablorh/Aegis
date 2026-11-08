@@ -117,4 +117,5 @@ export const isTerminal = (s: IntentLifecycleState) => NEXT[s].length === 0;
 export const canTransition = (a: IntentLifecycleState, b: IntentLifecycleState) => NEXT[a].includes(b);
 
 export { commitmentHash } from "./commitment.js";
+export { encryptPolicy, hexToBytes, randomBytes } from "./encrypt.js";
 export { RESCUE_ACTION_TAG, signingMessageHex } from "./signing.js";
