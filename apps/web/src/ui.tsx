@@ -2,10 +2,19 @@ import type { ReactNode } from "react";
 
 export function Mark() {
   return (
-    <svg className="mark" width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" strokeWidth="1.25" />
-      <path d="M6.5 15.5v-4M11 15.5V6.5M15.5 15.5V9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+    <svg className="mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M14.5 7.5v8" stroke="currentColor" strokeWidth="1.8" />
     </svg>
+  );
+}
+
+export function Wordmark() {
+  return (
+    <span className="wordmark">
+      <span className="wordmark-serif">Aegis</span>
+      <span className="wordmark-sans">Margin</span>
+    </span>
   );
 }
 
@@ -37,9 +46,9 @@ export function Field({ label, hint, children }: { label: string; hint?: string;
   );
 }
 
-export function Button({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function Button({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button className="btn" type="button" {...props}>
+    <button className={className ? `btn ${className}` : "btn"} type="button" {...props}>
       {children}
     </button>
   );
