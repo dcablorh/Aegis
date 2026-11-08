@@ -1,5 +1,15 @@
 import type { OneClickQuotePayload } from "@aegis/shared-types";
 
+/** Vault payload plus the two cost figures the enclave compares. */
+export interface QuoteDetails extends OneClickQuotePayload {
+  /** Expected input before the slippage buffer. Falls back to `amount_in`. */
+  min_amount_in: string;
+  /** Spread using `amountIn`, which already includes the slippage buffer. */
+  worst_case_spread_bps: number;
+  amount_in_usd: string;
+  amount_out_usd: string;
+}
+
 /** Live mainnet quote endpoint. There is no 1Click testnet. */
 export const QUOTE_URL = "https://1click.chaindefuser.com/v0/quote";
 
@@ -61,6 +71,7 @@ interface RawQuoteResponse {
   quote?: {
     depositAddress?: string | null;
     amountIn?: string;
+    minAmountIn?: string;
     amountInUsd?: string;
     amountOut?: string;
     amountOutUsd?: string;
@@ -92,7 +103,7 @@ export function checkQuote(
   expectDry: boolean,
   needOutRaw: bigint,
   penaltySavedBps: number,
-): OneClickQuotePayload {
+): QuoteDetails {
   if (typeof raw !== "object" || raw === null) throw new QuoteError("BadJson", "quote response is not an object");
   const body = raw as RawQuoteResponse;
   if (typeof body.correlationId !== "string" || !body.quote || !body.quoteRequest) {
@@ -119,20 +130,34 @@ export function checkQuote(
   const usdIn = parseUsdMicro(amountInUsd);
   const usdOut = parseUsdMicro(amountOutUsd);
   if (usdIn === null || usdOut === null) throw new QuoteError("BadAmount", "USD amounts are not decimal strings");
+  if (BigInt(amountIn) === 0n) throw new QuoteError("BadAmount", "amountIn is zero");
+  const minAmountIn = body.quote.minAmountIn ?? amountIn;
+  if (!/^\d+$/.test(minAmountIn)) throw new QuoteError("BadAmount", "minAmountIn is not an integer string");
+  const cappedMin = BigInt(minAmountIn) < BigInt(amountIn) ? BigInt(minAmountIn) : BigInt(amountIn);
+  const usdExpected = (usdIn * cappedMin) / BigInt(amountIn);
   return {
     quote_id: body.correlationId,
     dry: expectDry,
     deposit_address: depositAddress,
     amount_in: amountIn,
     amount_out: amountOut,
-    solver_spread_bps: spreadBps(usdIn, usdOut),
+    solver_spread_bps: spreadBps(usdExpected, usdOut),
     liquidation_penalty_saved_bps: penaltySavedBps,
+    min_amount_in: minAmountIn,
+    worst_case_spread_bps: spreadBps(usdIn, usdOut),
+    amount_in_usd: amountInUsd,
+    amount_out_usd: amountOutUsd,
   };
 }
 
+function envValue(name: string): string | undefined {
+  if (typeof process === "undefined" || process.env === undefined) return undefined;
+  return process.env[name];
+}
+
 function authHeaders(options: QuoteClientOptions): Record<string, string> {
-  const apiKey = options.apiKey ?? process.env.ONECLICK_API_KEY;
-  const jwt = options.jwt ?? process.env.ONECLICK_JWT;
+  const apiKey = options.apiKey ?? envValue("ONECLICK_API_KEY");
+  const jwt = options.jwt ?? envValue("ONECLICK_JWT");
   if (apiKey) return { "X-API-Key": apiKey };
   if (jwt) return { Authorization: `Bearer ${jwt}` };
   return {};
@@ -162,7 +187,7 @@ export function quoteRequestBody(params: QuoteRequestParams): Record<string, unk
 export async function fetch1ClickQuote(
   params: QuoteRequestParams,
   options: QuoteClientOptions = {},
-): Promise<OneClickQuotePayload> {
+): Promise<QuoteDetails> {
   const doFetch = options.fetch ?? fetch;
   const response = await doFetch(QUOTE_URL, {
     method: "POST",
