@@ -45,9 +45,14 @@ export interface StatusPollOptions {
   onStatusChange?: (state: IntentLifecycleState, raw: string) => void;
 }
 
+function envValue(name: string): string | undefined {
+  if (typeof process === "undefined" || process.env === undefined) return undefined;
+  return process.env[name];
+}
+
 function authHeaders(options: StatusPollOptions): Record<string, string> {
-  const apiKey = options.apiKey ?? process.env.ONECLICK_API_KEY;
-  const jwt = options.jwt ?? process.env.ONECLICK_JWT;
+  const apiKey = options.apiKey ?? envValue("ONECLICK_API_KEY");
+  const jwt = options.jwt ?? envValue("ONECLICK_JWT");
   if (apiKey) return { "X-API-Key": apiKey };
   if (jwt) return { Authorization: `Bearer ${jwt}` };
   return {};
