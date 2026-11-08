@@ -2,7 +2,7 @@ import { useState } from "react";
 import { fetch1ClickQuote, type QuoteDetails } from "@aegis/intents-client";
 import { BASE_USDC, DRY_RECIPIENT, DRY_REFUND_TO, NEAR_USDC } from "../config";
 import { formatBps } from "../format";
-import { Button, Field, Notice, Section } from "../ui";
+import { Button, Field, Notice, Pending, Section, SpreadScale } from "../ui";
 
 const STATES = ["Not started", "PENDING_DEPOSIT", "PROCESSING", "SUCCESS", "REFUNDED", "FAILED"] as const;
 
@@ -54,32 +54,39 @@ export function QuotePage() {
 
   const rejected = quote !== null && quote.worst_case_spread_bps >= Number(penalty);
 
+  const penaltyBps = Number(penalty);
+
   return (
     <>
+      <p className="kicker">1Click</p>
       <h1>Dry-run quote</h1>
       <p className="lede">
         Requests a live 1Click price with dry set to true. No deposit address is created and no swap starts.
         The default output, 345600000, is the documented 345.60 USDC example, not a balance from your account.
       </p>
-      <form className="form" onSubmit={(event) => { event.preventDefault(); void onQuote(); }}>
+      <form className="toolbar" onSubmit={(event) => { event.preventDefault(); void onQuote(); }}>
         <Field label="Output units" hint="NEAR USDC has 6 decimals.">
           <input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="numeric" />
         </Field>
         <Field label="Penalty saved (bps)" hint="Compared with the worst-case spread. 720 is the documented stress case.">
           <input value={penalty} onChange={(event) => setPenalty(event.target.value)} inputMode="numeric" />
         </Field>
-        <Button type="submit" disabled={pending}>{pending ? "Requesting" : "Request dry-run quote"}</Button>
+        <Button type="submit" disabled={pending} aria-busy={pending}>{pending ? "Requesting" : "Request dry-run quote"}</Button>
       </form>
-      <Section title="Lifecycle">
-        <p>A dry quote never enters these states. They are the vault's states after a real deposit.</p>
-        <div className="states">
-          {STATES.map((state) => <span key={state} data-on={state === "Not started" ? "true" : "false"}>{state}</span>)}
-        </div>
+      <Section title="Settlement states">
+        <p className="aside">A dry quote never enters these states. They are the vault's states after a real deposit.</p>
+        <ol className="rail">
+          {STATES.map((state) => <li key={state} data-on={state === "Not started" ? "true" : "false"}>{state}</li>)}
+        </ol>
       </Section>
+      {pending ? <Pending label="Asking 1Click for a dry quote." /> : null}
       {error ? <Section title="Quote failed"><Notice tone="error" title="1Click did not return a usable quote">{error}</Notice></Section> : null}
       {quote ? (
         <Section title="LIVE 1CLICK DRY-RUN QUOTE">
-          <dl>
+          <div className="panel">
+            <SpreadScale expected={quote.solver_spread_bps} worst={quote.worst_case_spread_bps} penalty={Number.isInteger(penaltyBps) ? penaltyBps : 0} />
+          </div>
+          <dl className="sheet spaced">
             <dt>Quote id</dt>
             <dd className="num">{quote.quote_id}</dd>
             <dt>Dry</dt>
@@ -97,7 +104,7 @@ export function QuotePage() {
             <dt>Worst-case spread</dt>
             <dd className="num">{formatBps(quote.worst_case_spread_bps)} ({quote.worst_case_spread_bps} bps)</dd>
           </dl>
-          <div style={{ marginTop: 16 }}>
+          <div className="aside">
             {rejected ? (
               <Notice tone="warn" title="The enclave would reject this quote">
                 Worst-case spread is not below the penalty you entered. Nothing was executed.
