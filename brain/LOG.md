@@ -1,5 +1,79 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-04 (live 1Click dry-run quotes)
+**Worked**
+- HTTP from the enclave via `wasi-http-client` on wasip2. End to end: vault -> OutLayer TEE -> live 1Click dry quote -> signed decision -> vault verifies -> `dry_run_quote_verified`.
+- Saved a real 1Click response as a test fixture (`enclave/aegis-wasi/tests/fixtures/1click_dry_live.json`) so the parser is tested against reality.
+
+**Failed, then fixed**
+- Design bug: 1Click's `amountIn` already includes the slippage buffer, so "spread" measured from it was always at least the borrower's own slippage limit (102 bps vs a 100 bps limit) and every rescue was refused. Now: expected cost comes from `minAmountIn` (about 1 bps) and the full `amountIn` is only the worst case, checked against the liquidation penalty saved.
+- 1Click returns HTTP 400 for a testnet account as recipient. Use a mainnet-valid address for dry price checks.
+- Quote prices move between calls (51 bps, then 102 bps worst case) so tests must not hard-code a live spread.
+
+**Lessons**
+- Test parsers against a real recorded response, not only a hand-written one.
+
+## 2026-11-04 (first real end-to-end dry run)
+**Worked**
+- Fresh vault deployed under the `aegis-enclave-dev1` account family, new enclave version uploaded, secrets re-set with a whitelist, borrower policy registered with a real encrypted fixture. A trigger ended with `dry_run_quote_verified` after the enclave ran in OutLayer's TEE and the vault verified its signature on chain.
+
+**Failed, then fixed (three real bugs found by running it)**
+1. `/tmp` in the Codespace is wiped when it shuts down, so saved keys vanished. Keep secrets under the home folder and back them up.
+2. The first versions were refused with "Access denied by access condition": OutLayer evaluates the secret whitelist against the transaction **signer** (the keeper), not just the calling contract. The whitelist now has both.
+3. The vault sent empty OutLayer limits (`{}`), which the worker rejected ("Execution promise failed"). The vault now sends explicit limits (1 billion instructions, 128 MB, 10 s). This was invisible in unit tests.
+
+**Lessons**
+- Unit tests cannot find integration mistakes like these; only a real run did. Keep at least one live smoke test in the checklist.
+- The Codespace holds the only copy of some testnet keys; they are now also backed up locally (outside the repo) in `~/aegis-codespace-backup` and `~/.near-credentials/testnet`.
+
+**Still not done**
+- Live 1Click quotes (the quote is a saved dry-run), real money movement, position-account execution against this vault, and a real Burrow debt drop.
+
+## 2026-11-04 (OutLayer project created, via Codespace)
+**Worked**
+- Local install of `outlayer-cli` failed twice: the disk is nearly full (1.3 GB free) and a compile ran out of space. The human approved doing it in a GitHub Codespace instead.
+- In the Codespace: installed Rust and `outlayer-cli` 0.2.1 (about 8 minutes), built the enclave for `wasm32-wasip2` (335 KB), created a fresh throwaway testnet account (so no existing key left this machine), logged in, uploaded the wasm, created the project and stored the secrets.
+
+**Not done / found**
+- Three mismatches listed in STATUS.md stop a real end-to-end run.
+- The Codespace is set to stop after 30 idle minutes and be removed 24 hours after that. Delete it sooner with `gh codespace delete -c aegis-outlayer-wr97vp6v99qx2g7q4`.
+
+## 2026-11-04 (OutLayer preparation, nothing spent)
+**Read the OutLayer docs (app.outlayer.ai/docs: projects, secrets, wasi, pricing)**
+- Output limit is **900 bytes**. Our worst-case signed decision is 686 bytes (new test guards this).
+- Outbound HTTP from the program needs the **wasm32-wasip2** target and the `wasi-http-client` crate. Our program currently builds for wasip1 (no HTTP). A wasip2 build of it already compiles (about 335 KB).
+- A project is created from a WASM URL plus its SHA-256 (`outlayer upload`, then dashboard "New Project" or `outlayer deploy`). Project id format is `owner_account/name`. A project has a refundable storage deposit. Secrets are encrypted in the browser and exposed to the program as environment variables; auto-generated secrets (for example an Ed25519 key made inside the TEE) are named `PROTECTED_*`.
+- Estimated cost of one run on testnet from the view call `estimate_execution_cost`: 0.007 NEAR (1 billion instructions, 60 s).
+- Docs do not say: the project deposit amount, whether the dashboard supports testnet, or secret size limits. Failed runs are not refunded.
+
+## 2026-11-04 (M7 testnet deploy)
+**Worked**
+- Deployed the real vault to `vault.aegis-vault-dev1.testnet` and ran live checks (see STATUS.md). `#[private]` on the callback is proven on a real network. A full trigger with a signed price reached `outlayer.testnet` and recovered cleanly when OutLayer failed.
+- Size-optimised release profile took the vault wasm from 524 KB to about 335 KB (storage on chain costs about 1 NEAR per 100 KB).
+- Added `LICENSE` (MIT), `contracts/README.md` (do X - see Y) and `.env.example`.
+
+**Failed, then fixed (important)**
+- The first deploy answered every refusal with a bare "unreachable" trap and no message. Cause: our plain `cargo build` did not set `--cfg near`, which near-sdk needs to use the real host functions (including the panic message). `cargo-near` sets it for you. Fix: `.cargo/config.toml` now sets `--cfg near` for the wasm target. After the fix the messages show (`ERR_NOT_OWNER`, `Method on_enclave_decision is private`, ...).
+- Lesson: any wasm built without that flag is **not** a faithful contract build. Always build wasm from this repo (it picks up the flag).
+- `panic = "abort"` was not the cause; it is left out of the release profile.
+
+**Still not done**
+- The enclave program is not deployed to OutLayer, so no real enclave answer has been delivered yet.
+- Real debt reduction on Burrow, and live 1Click quotes, remain unproven.
+
+## 2026-11-04 (M6 security and invariant tests)
+**Worked**
+- `contracts/aegis-vault/tests/invariant_tests.rs`: 12 tests, grouped by the five invariants, using only public vault methods.
+- `contracts/aegis-vault/tests/security_attack_sim.rs`: a compromised keeper tries 12 attacks (redirect money, forge or tamper with the enclave answer, replay an old answer, grab admin powers, fake a SUCCESS, execute twice). All refused. Read the audit log with `cargo test -p aegis-vault --test security_attack_sim -- --nocapture`.
+
+**Failed, then fixed**
+- First storage-privacy test saw an empty storage: the toolkit's collections only write when dropped. The test now drops the vault first, as the runtime does at the end of a call.
+- My first "replay" attack reused the same request id by accident (the test random seed is fixed), so it proved nothing. Now the second rescue uses a different seed and the test checks the ids differ.
+
+**Not covered by these tests**
+- That only the vault itself can call the enclave callback (`#[private]`). That check lives in the compiled contract entry point, so it can only be proven on testnet.
+- `near-workspaces` (full sandbox) was not used: it does not run on Windows.
+
 ## 2026-11-02 (live testnet spike: position -> Burrow)
 **Setup (testnet only, free faucet funds, keys stay in `~/.near-credentials`, never in the repo)**
 - `aegis-vault-dev1.testnet` stands in for the vault (10 NEAR from the faucet).

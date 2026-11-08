@@ -9,7 +9,7 @@ pub mod quote;
 
 use aegis_types::{EnclaveExecutionInput, EnclaveRescueDecision, RescueAction};
 use ed25519_dalek::SigningKey;
-use quote::{QuoteError, QuoteRequest, QuoteSource};
+use quote::{QuoteRequest, QuoteSource};
 
 /// Secrets and settings the enclave receives from OutLayer as environment variables.
 pub struct EnclaveConfig {
@@ -123,6 +123,7 @@ pub fn decide(
         recipient: cfg.recipient.clone(),
         refund_to: cfg.refund_to.clone(),
         slippage_bps: policy.max_slippage_bps,
+        now_unix_s: input.now_unix_s,
     };
     let raw = quotes.fetch(&req).map_err(DecideError::Quote)?;
     let saved = math::penalty_saved_bps(h.hf_bps) as u32;
@@ -134,7 +135,7 @@ pub fn decide(
         }
     };
     if q.solver_spread_bps > policy.max_slippage_bps || q.solver_spread_bps >= saved {
-        let why = Reason::QuoteRejected(format!("{:?}", QuoteError::ShortDelivery).replace("ShortDelivery", "SpreadTooHigh"));
+        let why = Reason::QuoteRejected("SpreadTooHigh".into());
         return finish(none_decision(input, h.hf_bps, trigger, policy.hf_target_bps), why);
     }
 
@@ -205,6 +206,20 @@ mod tests {
         assert!(q.dry);
         assert_eq!((q.solver_spread_bps, q.liquidation_penalty_saved_bps), (10, 720));
         assert_eq!(d.attestation_sha256, "cd".repeat(32));
+    }
+
+    #[test]
+    fn signed_decision_fits_outlayer_900_byte_output_limit() {
+        // OutLayer truncates stdout above 900 bytes, which would break the JSON the vault has to parse.
+        let (d, _) = decide(&input(10_800, 35), &cfg(), &quotes("345.95")).unwrap();
+        let mut d = d;
+        // worst realistic case: long 1Click correlation id and a 64-char implicit-account deposit address
+        let q = d.oneclick_quote.as_mut().unwrap();
+        q.quote_id = "x".repeat(36);
+        q.deposit_address = "a".repeat(64);
+        let len = serde_json::to_string(&d).unwrap().len();
+        println!("decision json bytes: {len}");
+        assert!(len <= 900, "decision is {len} bytes");
     }
 
     #[test]

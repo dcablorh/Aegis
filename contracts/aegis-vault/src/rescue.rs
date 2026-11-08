@@ -15,6 +15,10 @@ use near_sdk::{
 use crate::oracle::token_account_of;
 use crate::{AegisVault, AegisVaultExt};
 
+/// Explicit OutLayer limits. Empty limits (`{}`) made the worker fail on testnet; the enclave uses about 10 million instructions.
+const ENCLAVE_MAX_INSTRUCTIONS: u64 = 1_000_000_000;
+const ENCLAVE_MAX_MEMORY_MB: u32 = 128;
+const ENCLAVE_MAX_SECONDS: u64 = 10;
 const REQUEST_GAS: Gas = Gas::from_tgas(100);
 const CALLBACK_GAS: Gas = Gas::from_tgas(30);
 const POSITION_SEND_GAS: Gas = Gas::from_tgas(60);
@@ -46,7 +50,10 @@ impl AegisVault {
         price_history: Vec<OraclePricePayload>,
     ) -> Promise {
         self.assert_authorized_keeper(&env::predecessor_account_id());
-        require!(!self.outlayer_project_id.is_empty(), "ERR_OUTLAYER_NOT_CONFIGURED");
+        require!(
+            !self.outlayer_project_id.is_empty() && !self.outlayer_secrets_account_id.is_empty(),
+            "ERR_OUTLAYER_NOT_CONFIGURED"
+        );
         require!(!self.enclave_public_key_hex.is_empty(), "ERR_ENCLAVE_NOT_CONFIGURED");
         let policy = self.policies.get(&account_id).cloned().unwrap_or_else(|| env::panic_str("ERR_NO_POLICY"));
         require!(self.lock_of(&account_id) == RescueLock::Idle, errors::RESCUE_IN_FLIGHT);
@@ -72,9 +79,9 @@ impl AegisVault {
         };
         let args = serde_json::json!({
             "source": { "Project": { "project_id": self.outlayer_project_id, "version_key": null } },
-            "resource_limits": {},
+            "resource_limits": { "max_instructions": ENCLAVE_MAX_INSTRUCTIONS, "max_memory_mb": ENCLAVE_MAX_MEMORY_MB, "max_execution_seconds": ENCLAVE_MAX_SECONDS },
             "input_data": serde_json::to_string(&input).unwrap(),
-            "secrets_ref": { "profile": self.outlayer_secrets_profile, "account_id": self.owner_id },
+            "secrets_ref": { "profile": self.outlayer_secrets_profile, "account_id": self.outlayer_secrets_account_id },
             "response_format": "Json",
         });
         Promise::new(self.outlayer_contract_id.clone())

@@ -48,7 +48,7 @@ fn vault() -> AegisVault {
     let pinned = format!("ed25519:{}", near_sdk::bs58::encode(oracle_key().verifying_key().to_bytes()).into_string());
     let mut v = AegisVault::new(id("admin.near"), pinned, id("burrow.near"), id("ref.near"), id("outlayer.near"), id("intents.near"));
     v.set_enclave(hex::encode(enclave_key().verifying_key().to_bytes()), "cd".repeat(32));
-    v.set_outlayer_project("admin.near/aegis".into(), "default".into());
+    v.set_outlayer_project("admin.near/aegis".into(), "default".into(), "admin.near".into());
     v.register_keeper(id("keeper.near"));
     as_caller("alice.near", 1000);
     v.register_policy("ab".repeat(32), "Y2lwaGVy".into(), vec!["nep141:base-usdc.omft.near".into()], "nep141:usdc.near".into());
@@ -129,6 +129,16 @@ fn tampered_feed_is_rejected() {
 }
 
 // ---- trigger ----
+#[test]
+#[should_panic(expected = "ERR_OUTLAYER_NOT_CONFIGURED")]
+fn trigger_needs_the_secrets_account_to_be_set() {
+    let mut v = vault();
+    as_caller("admin.near", 1000);
+    v.set_outlayer_project("admin.near/aegis".into(), "default".into(), String::new());
+    as_caller("keeper.near", 1000);
+    let _ = v.trigger_solvency_check(id("alice.near"), empty_position(), feed(&oracle_key(), 1000), vec![]);
+}
+
 #[test]
 #[should_panic(expected = "ERR_UNAUTHORIZED_KEEPER")]
 fn only_keepers_can_trigger() {
