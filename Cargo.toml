@@ -1,0 +1,10 @@
+[workspace]
+members = ["crates/aegis-types", "contracts/aegis-vault", "contracts/aegis-position", "enclave/aegis-wasi"]
+resolver = "2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+overflow-checks = true

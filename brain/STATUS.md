@@ -1,0 +1,72 @@
+# Status
+
+_Last updated: 2026-11-02 (Developer 1)_
+
+## Milestones (Developer 1)
+| # | Milestone | State |
+|---|---|---|
+| M0 | Check tools and read the real docs (OutLayer, price oracle) | Done |
+| M1 | Shared Rust types: fingerprint, price feed, rescue ticket, errors | Done, merged to staging |
+| M2 | Vault: store policies, keepers, allowed recipients | Done, in PR #3 |
+| M3 | Price check + start-a-rescue + lock | Done, in PR (needs real OutLayer test) |
+| M4 | Secret-box program (enclave): the maths and the decision | Done, in PR (needs wasm build check, see below) |
+| M5 | Handle the decision, repay on Burrow, handle refund/fail | Done in code with unit tests; not run on testnet |
+| M6 | Security attack test + one test per rule | Done, in PR |
+| M7 | Build, deploy to testnet, final docs | Done on testnet (vault + position); enclave not yet deployed to OutLayer |
+
+## Tests right now
+- `aegis-types`: 7 passing.
+- `aegis-wasi` (enclave): 27 passing.
+- `aegis-vault`: 35 unit + 12 invariant + 2 attack-simulation tests passing.
+- `aegis-position`: 7 passing.
+
+## Open pull requests
+- #3 Vault contract (into `dev1/staging`).
+- Enclave PR from `dev1/enclave` (into `dev1/staging`; includes #3's commits until #3 is merged).
+
+## Not yet verified
+- The enclave has not yet been built for `wasm32-wasip1` (the download was blocked by a network outage). Run `cargo build -p aegis-wasi --target wasm32-wasip1 --release` when online.
+- Live 1Click HTTP calls from inside the enclave are not wired. The enclave reads the quote through a swappable source; today only an offline file/fixture works.
+
+## Things we still do not know (must check before the milestone that needs them)
+- The trusted public key of the price oracle (needed for M3).
+- The exact message Burrow expects to repay a loan, and the right USDC token id (needed for M5).
+- Whether `outlayer.testnet` is live, and how the enclave's signing key reaches the contract (needed for M5).
+
+## Blockers
+- None. Burrow repay problem solved with per-borrower position sub-accounts (DECISIONS.md).
+
+## Testnet accounts (free faucet funds, keys local only)
+- `vault.aegis-vault-dev1.testnet`: the real `aegis-vault`, owner and only keeper = `aegis-vault-dev1.testnet`. Oracle and enclave keys pinned are throwaway **test** keys (private halves are not in the repo).
+- `alice.aegis-vault-dev1.testnet`: the borrower and position account (`aegis-position` deployed; its vault is the dev account `aegis-vault-dev1.testnet`, not yet the vault contract).
+- Checked live: owner-only methods refuse strangers (`ERR_NOT_OWNER`); position refuses non-vault callers (`ERR_NOT_VAULT`); callback is private (`Method on_enclave_decision is private`); a signed price passes, locks the borrower, calls `outlayer.testnet`; when OutLayer fails the callback logs `RESCUE_NOT_EXECUTED:enclave_call_failed` and the lock returns to IDLE.
+
+## OutLayer (testnet), created 2026-11-04 from a GitHub Codespace
+- Project: `aegis-enclave-dev1.testnet/aegis`. Wasm built for `wasm32-wasip2`, sha256 `2740d0786eda65b9236f8ed34f121646a5facda266e932c1f87dca7bc337ce46`, stored on FastFS: `https://test.fastfs.io/aegis-enclave-dev1.testnet/outlayer.testnet/2740d0786eda65b9236f8ed34f121646a5facda266e932c1f87dca7bc337ce46.wasm`.
+- Secrets stored under profile `default` (values live only in OutLayer and the Codespace, never in the repo): policy decryption key, enclave signing seed (same test key the vault pins), oracle public key, attestation hash, recipient, refund address, `AEGIS_LIVE=0`.
+- Public key borrowers encrypt their policy to (X25519): `8cbe8e0e1d72afebfa4e25215bcb95520f93566628b25e7a4d54a6e56f9caf1e`.
+- Spend so far: about 0.02 NEAR of free testnet funds. The signing account `aegis-enclave-dev1.testnet` has about 9.98 NEAR left; its key exists only inside the Codespace.
+- **Known mismatches before a real end-to-end run:**
+  1. The vault passes its own `owner_id` (`aegis-vault-dev1.testnet`) as the secrets owner, but the secrets belong to `aegis-enclave-dev1.testnet`. Fix: add a secrets-account setting to the vault (needs a fresh deploy because stored state changes), or redeploy the vault under the `aegis-enclave-dev1` account family.
+  2. Secrets were stored with `--access allow-all`. Tighten to a whitelist of the vault contract account.
+  3. The enclave has no way to get a swap quote inside OutLayer yet (no live HTTP, no offline source), so it exits with an error. Add an offline quote secret for the first run, then live `wasi-http-client`.
+
+## First real end-to-end run on testnet (2026-11-04)  [DRY-RUN QUOTE, no money moved]
+- Vault: `vault.aegis-enclave-dev1.testnet` (owner and keeper `aegis-enclave-dev1.testnet`, borrower `borrower1.aegis-enclave-dev1.testnet`). OutLayer project `aegis-enclave-dev1.testnet/aegis`, enclave wasm sha256 `60e8d5819ff52845a48c7f04e83f6177adff2545cacadaa3b0a04bdbcd0fa2d5` (active version).
+- Result: a keeper trigger with a signed price feed ran the enclave inside OutLayer's TEE. The enclave returned a signed `REPAY_DEBT` for 345.60 USDC (health 1.07, trigger 1.08). The vault verified the Ed25519 signature on chain against the pinned enclave key, checked the program fingerprint, saw the quote was a dry run and freed the lock: `AEGIS_EVENT:RESCUE_NOT_EXECUTED:dry_run_quote_verified`.
+- **OutLayer's reply shape is confirmed:** the callback receives the decision as a plain JSON object (631 bytes). The vault already accepted that.
+- Public key borrowers encrypt to (X25519, this deployment): `8ebeed88c4469461017e19489ef7679a743ce531612d71f0565220c4a894c215`.
+- Secrets access is a whitelist of the keeper account and the vault. OutLayer checks the **signer** of the transaction, not only the calling contract.
+- The old `vault.aegis-vault-dev1.testnet` and `alice...` are the earlier test deployment (old state layout); keep for reference or delete.
+
+## Live 1Click dry-run quotes (2026-11-04)  [STILL dry: true, no money moved]
+- The enclave (wasm32-wasip2, sha256 `fc3b4851d662fb804647f29dc48cf833c7904e6f230282ccd94b17caa9a1a4de`, active version) now calls `https://1click.chaindefuser.com/v0/quote` itself from inside OutLayer. The saved-quote secret was removed.
+- Evidence: a direct run returned a signed `REPAY_DEBT` with real quote `3d770e2b-8a21-47e2-ae0f-7d3ee72ea0a2`: 349.144398 USDC on Base in for 345.60 USDC on NEAR out, expected spread 1 bps. Output 657 bytes (limit 900), 10.7M instructions, 1.5 s. A vault trigger ended with `dry_run_quote_verified`.
+- The vault policy now uses the real 1Click asset ids (Base USDC in, NEAR native USDC out) and a 100 bps limit.
+- For the dry check the recipient secret is `intents.near` (1Click rejects testnet accounts) and the refund address is the docs example EVM address. Both are placeholders for a dry price check only.
+
+## Unverified assumptions (must be tested on testnet)
+- (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
+- The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).
+- Moving the reserve to a 1Click deposit address with a plain token transfer works for NEAR-side origin tokens.
+- Testnet has no NEAR Intents, so the cross-chain leg can only be shown as dry-run quotes there.
