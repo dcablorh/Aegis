@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import { RPC_TESTNET, viewFunction } from "@aegis/rhea-client";
-import { VAULT_TESTNET } from "../config";
-import { Button, Field, Notice, Pending, Section } from "../ui";
+import { ENCLAVE_X25519_HEX, VAULT_TESTNET } from "../config";
+import { Button, Field, Notice, Pending } from "../ui";
 
 export function SecurityPage() {
   const [borrower, setBorrower] = useState("borrower1.aegis-enclave-dev1.testnet");
@@ -32,11 +33,8 @@ export function SecurityPage() {
   return (
     <>
       <p className="kicker">Vault</p>
-      <h1>Allowlist</h1>
-      <p className="lede">
-        Asks the deployed testnet vault whether this borrower may send funds to this recipient.
-        A deposit address from a quote is not on this static list. It is allowed only while it sits inside a signed rescue ticket.
-      </p>
+      <h1>Security</h1>
+      <p className="lede">The allowlist is a live view. The encryption key is the public key this app encrypts to. There is no audit badge and no attestation score on this page.</p>
       <div className="overview">
         <form className="panel stack" onSubmit={(event) => { event.preventDefault(); void onCheck(); }}>
           <Field label="Borrower">
@@ -58,23 +56,28 @@ export function SecurityPage() {
             <li><strong>Ref Finance</strong><span>The fallback venue.</span></li>
             <li><strong>intents.near</strong><span>The intents contract.</span></li>
           </ul>
-          <p className="aside">Anything else is refused with ERR_UNAUTHORIZED_RECIPIENT when a transfer is attempted. This page only reads the view.</p>
+          <p className="aside">A quote deposit address is not on this list. It is allowed only inside a signed rescue ticket. This page only reads the view.</p>
         </section>
       </div>
       {pending ? <div className="aside"><Pending label="Asking the testnet vault." /></div> : null}
-      {error ? <Section title="View failed"><Notice tone="error" title="The vault did not answer">{error}</Notice></Section> : null}
+      {error ? <div className="aside"><Notice tone="error" title="The vault did not answer">{error}</Notice></div> : null}
       {allowed !== null ? (
-        <Section title="Result">
+        <section className="section">
           <div className={allowed ? "panel verdict allowed" : "panel verdict blocked"}>
             <p className="verdict-word">{allowed ? "Allowed" : "Blocked"}</p>
-            <p>
-              {allowed
-                ? `${recipient} is on the allowlist for ${borrower}.`
-                : `${recipient} is not on the allowlist for ${borrower}. The view returned false.`}
-            </p>
+            <p>{allowed ? `${recipient} is on the allowlist for ${borrower}.` : `${recipient} is not on the allowlist for ${borrower}. The view returned false.`}</p>
           </div>
-        </Section>
+        </section>
       ) : null}
+      <section className="section">
+        <h2>What this app can show</h2>
+        <dl className="sheet">
+          <dt>Vault</dt><dd>{VAULT_TESTNET}</dd>
+          <dt>Policy encryption key</dt><dd className="num">{ENCLAVE_X25519_HEX}</dd>
+          <dt>Wallet permissions</dt><dd>None. <Link to="/app/settings">Settings</Link> only chooses the RPC network.</dd>
+          <dt>Attestation</dt><dd>The vault pins a program hash. This page does not display a verification badge for it.</dd>
+        </dl>
+      </section>
     </>
   );
 }
