@@ -3,6 +3,7 @@ import { PositionPage } from "./pages/PositionPage";
 import { ProtectionPage } from "./pages/ProtectionPage";
 import { QuotePage } from "./pages/QuotePage";
 import { SecurityPage } from "./pages/SecurityPage";
+import { Mark } from "./ui";
 
 const LINKS = [
   { href: "/", label: "Position" },
@@ -34,12 +35,15 @@ export function App() {
     : <PositionPage />;
   return (
     <>
-      <a href="#content" style={{ position: "absolute", left: -9999 }}>Skip to content</a>
+      <a className="skip" href="#content">Skip to content</a>
       <header className="top">
-        <div className="brand">
-          <strong>AegisMargin</strong>
-          <span>Testnet reads. Dry-run quotes.</span>
-        </div>
+        <a className="brand" href="/" onClick={(event) => go(event, "/")}>
+          <Mark />
+          <span className="brand-copy">
+            <strong>AegisMargin</strong>
+            <span>Testnet reads · dry-run quotes</span>
+          </span>
+        </a>
         <nav aria-label="Primary">
           {LINKS.map((link) => (
             <a key={link.href} href={link.href} aria-current={path === link.href || (link.href === "/" && path === "") ? "page" : undefined} onClick={(event) => go(event, link.href)}>
@@ -48,7 +52,7 @@ export function App() {
           ))}
         </nav>
       </header>
-      <main id="content" className="page">{page}</main>
+      <main id="content" key={path} className="page">{page}</main>
     </>
   );
 }
