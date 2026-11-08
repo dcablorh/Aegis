@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   canTransition,
   commitmentHash,
+  encryptPolicy,
   errors,
+  hexToBytes,
   isTerminal,
   signingMessageHex,
   type EnclaveRescueDecision,
@@ -70,6 +72,13 @@ test("signing message matches aegis-types and ignores the signature field", () =
     signingMessageHex({ ...decision, action: "NONE", oneclick_quote: null }),
     "dcda35cff2e1db46963633c22c8b0151d4486f2b620aa0b5d4abc5b3ac909e62",
   );
+});
+
+test("policy ciphertext matches the enclave", () => {
+  const policy = { hf_min_bps: 10800, hf_target_bps: 12500, max_slippage_bps: 35, salt_hex: "a1b2c3" };
+  const pub = hexToBytes("5dfedd3b6bd47f6fa28ee15d969d5bb0ea53774d488bdaf9df1c6e0124b3ef22");
+  const ct = encryptPolicy(policy, pub, new Uint8Array(32).fill(5), new Uint8Array(12).fill(1));
+  assert.equal(ct, "UKYUCbHd0DJemxa3AOcZ6XcsBwALG9d4bpB8ZT0gSV0BAQEBAQEBAQEBAQGdlL00kikk+qa/7oe4okZ/b5LlfqLvsECk7B/0dGvKwPDPM1S6MXQ1/BEbSgJWG3tICZ4K0nUbSDpt9wIAlI3lBR8UVL5P0MrDwEZD2hDknyp49ELfXgYsWSLslbsTIcWsIej2");
 });
 
 test("wire enums match serde rename_all", () => {
