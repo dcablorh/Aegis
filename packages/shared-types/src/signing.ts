@@ -1,5 +1,7 @@
-import { createHash } from "node:crypto";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import type { EnclaveRescueDecision, RescueAction } from "./index.js";
+import { concat, u32be, utf8 } from "./bytes.js";
 
 /** Rust enum discriminants used by `EnclaveRescueDecision::signing_message`. */
 export const RESCUE_ACTION_TAG: Record<RescueAction, number> = {
@@ -9,16 +11,7 @@ export const RESCUE_ACTION_TAG: Record<RescueAction, number> = {
   LOCAL_FALLBACK_SWAP: 3,
 };
 
-function u32be(n: number): Buffer {
-  if (!Number.isInteger(n) || n < 0 || n > 0xffffffff) {
-    throw new Error("expected a u32");
-  }
-  const buf = Buffer.alloc(4);
-  buf.writeUInt32BE(n);
-  return buf;
-}
-
-function field(parts: Buffer[], bytes: Buffer): void {
+function field(parts: Uint8Array[], bytes: Uint8Array): void {
   parts.push(u32be(bytes.length), bytes);
 }
 
@@ -28,29 +21,22 @@ function field(parts: Buffer[], bytes: Buffer): void {
  */
 export function signingMessageHex(decision: EnclaveRescueDecision): string {
   const tag = RESCUE_ACTION_TAG[decision.action];
-  if (tag === undefined) {
-    throw new Error(`unknown rescue action: ${decision.action}`);
-  }
-  const parts: Buffer[] = [Buffer.from("aegis-decision-v1")];
-  field(parts, Buffer.from(decision.request_id));
-  field(parts, Buffer.from(decision.account_id));
-  parts.push(
-    u32be(decision.observed_hf_bps),
-    u32be(decision.trigger_hf_bps),
-    u32be(decision.target_hf_bps),
-    Buffer.from([tag]),
-  );
-  field(parts, Buffer.from(decision.repay_amount_raw));
+  if (tag === undefined) throw new Error(`unknown rescue action: ${decision.action}`);
+  const parts: Uint8Array[] = [utf8("aegis-decision-v1")];
+  field(parts, utf8(decision.request_id));
+  field(parts, utf8(decision.account_id));
+  parts.push(u32be(decision.observed_hf_bps), u32be(decision.trigger_hf_bps), u32be(decision.target_hf_bps), new Uint8Array([tag]));
+  field(parts, utf8(decision.repay_amount_raw));
   const quote = decision.oneclick_quote;
   if (quote === null) {
-    parts.push(Buffer.from([0]));
+    parts.push(new Uint8Array([0]));
   } else {
-    parts.push(Buffer.from([1, quote.dry ? 1 : 0]));
-    field(parts, Buffer.from(quote.quote_id));
-    field(parts, Buffer.from(quote.deposit_address));
-    field(parts, Buffer.from(quote.amount_in));
-    field(parts, Buffer.from(quote.amount_out));
+    parts.push(new Uint8Array([1, quote.dry ? 1 : 0]));
+    field(parts, utf8(quote.quote_id));
+    field(parts, utf8(quote.deposit_address));
+    field(parts, utf8(quote.amount_in));
+    field(parts, utf8(quote.amount_out));
     parts.push(u32be(quote.solver_spread_bps), u32be(quote.liquidation_penalty_saved_bps));
   }
-  return createHash("sha256").update(Buffer.concat(parts)).digest("hex");
+  return bytesToHex(sha256(concat(parts)));
 }
