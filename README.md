@@ -23,10 +23,13 @@ pnpm dev
 
 Open `http://localhost:5173`.
 
-- Position: type a Burrow account and read collateral, debt, and health when a price exists.
+- Landing: the product explanation. Enter the app from there.
+- Positions: read a Burrow account. Health appears only when a price and a debt exist.
 - Protection: prepare a local commitment and ciphertext. Nothing is submitted.
-- Quote: request a dry-run 1Click quote. The deposit address is `dry_run`.
-- Allowlist: ask the testnet vault whether a recipient is allowed.
+- Activity: request a dry-run 1Click quote. The deposit address is `dry_run`.
+- Security: ask the testnet vault whether a recipient is allowed.
+
+`/protection`, `/quote`, and `/security` redirect into the app.
 
 **3. Run the contract tests**
 
