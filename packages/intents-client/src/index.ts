@@ -6,6 +6,7 @@ export {
   parseUsdMicro,
   quoteRequestBody,
   type QuoteClientOptions,
+  type QuoteDetails,
   type QuoteRequestParams,
   type SwapType,
 } from "./quote.js";
