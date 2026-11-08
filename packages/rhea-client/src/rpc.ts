@@ -13,6 +13,17 @@ interface RpcResponse {
   error?: { message?: string };
 }
 
+function encodeBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeUtf8(bytes: number[]): string {
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+
 export async function viewFunction<T>(
   contractId: string,
   method: string,
@@ -31,7 +42,7 @@ export async function viewFunction<T>(
         request_type: "call_function",
         account_id: contractId,
         method_name: method,
-        args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
+        args_base64: encodeBase64(JSON.stringify(args)),
         finality: "final",
       },
     }),
@@ -41,5 +52,5 @@ export async function viewFunction<T>(
   if (body.error) throw new Error(body.error.message ?? "NEAR RPC error");
   if (body.result?.error) throw new Error(body.result.error);
   if (!body.result?.result) throw new Error(`empty result from ${method}`);
-  return JSON.parse(Buffer.from(body.result.result).toString("utf8")) as T;
+  return JSON.parse(decodeUtf8(body.result.result)) as T;
 }
