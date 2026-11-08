@@ -49,6 +49,15 @@ test("usd parsing matches the enclave", () => {
   assert.equal(parseUsdMicro("x"), null);
 });
 
+test("expected spread uses minAmountIn and worst case uses amountIn", () => {
+  const raw = sample(true, "345.95", "345600000") as { quote: { minAmountIn?: string } };
+  raw.quote.minAmountIn = "345700000";
+  const quote = checkQuote(raw, true, 345_600_000n, 720);
+  assert.equal(quote.solver_spread_bps, 2);
+  assert.equal(quote.worst_case_spread_bps, 10);
+  assert.equal(quote.min_amount_in, "345700000");
+});
+
 test("dry quote is checked and spread is computed", () => {
   const quote = checkQuote(sample(true, "345.95", "345600000"), true, 345_600_000n, 720);
   assert.equal(quote.dry, true);
