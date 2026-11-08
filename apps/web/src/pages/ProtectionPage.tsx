@@ -52,31 +52,46 @@ export function ProtectionPage() {
     });
   }
 
+  const minHf = draftHf(minimum);
+  const targetHf = draftHf(target);
+  const slip = Number(slippage);
+  const slipOk = Number.isInteger(slip) && slip >= 1 && slip <= 100;
+
   return (
     <>
+      <p className="kicker">Policy</p>
       <h1>Protection</h1>
       <p className="lede">
         These three numbers stay off the chain. The page builds a commitment and ciphertext for the current testnet enclave key.
         It does not call the vault. Registering the policy requires a signed transaction, which this build does not send.
       </p>
-      <div className="grid-3">
-        <Field label="Minimum health" hint="Trigger floor, 1.05 to 1.20.">
-          <input value={minimum} onChange={(event) => setMinimum(event.target.value)} inputMode="decimal" />
-        </Field>
-        <Field label="Target health" hint="Level a repayment aims to restore.">
-          <input value={target} onChange={(event) => setTarget(event.target.value)} inputMode="decimal" />
-        </Field>
-        <Field label="Max swap cost (bps)" hint="100 bps is 1%.">
-          <input value={slippage} onChange={(event) => setSlippage(event.target.value)} inputMode="numeric" />
-        </Field>
-      </div>
-      <div style={{ marginTop: 16 }}>
-        <Button onClick={onPrepare}>Prepare policy locally</Button>
+      <div className="panel">
+        <div className="grid-3">
+          <Field label="Minimum health" hint="Trigger floor, 1.05 to 1.20.">
+            <input value={minimum} onChange={(event) => setMinimum(event.target.value)} inputMode="decimal" />
+          </Field>
+          <Field label="Target health" hint="Level a repayment aims to restore.">
+            <input value={target} onChange={(event) => setTarget(event.target.value)} inputMode="decimal" />
+          </Field>
+          <Field label="Max swap cost (bps)" hint="100 bps is 1%.">
+            <input value={slippage} onChange={(event) => setSlippage(event.target.value)} inputMode="numeric" />
+          </Field>
+        </div>
+        <DraftBand minimum={minHf} target={targetHf} />
+        <div className="aside">
+          <span>Swap cost of this draft</span>
+          <div className="meter" role="img" aria-label={slipOk ? `${slip} of 100 basis points` : "Swap cost is not a valid basis-point value"}>
+            <i style={{ width: slipOk ? `${slip}%` : "0%" }} />
+          </div>
+        </div>
+        <div className="aside">
+          <Button onClick={onPrepare}>Prepare policy locally</Button>
+        </div>
       </div>
       {error ? <Section title="Check"><Notice tone="error" title="The policy was not prepared">{error}</Notice></Section> : null}
       {prepared ? (
         <Section title="Local result">
-          <dl>
+          <dl className="sheet">
             <dt>Commitment</dt>
             <dd className="num">{prepared.commitment}</dd>
             <dt>Salt</dt>
@@ -84,11 +99,11 @@ export function ProtectionPage() {
             <dt>Enclave key</dt>
             <dd className="num">{ENCLAVE_X25519_HEX}</dd>
           </dl>
-          <div className="field" style={{ marginTop: 16 }}>
-            <label>Ciphertext</label>
+          <div className="field aside">
+            <span>Ciphertext</span>
             <textarea readOnly value={prepared.ciphertext} />
           </div>
-          <div style={{ marginTop: 16 }}>
+          <div className="aside">
             <Notice title="Not submitted">
               The ciphertext is in this browser only. The vault still has no record of it, and no approval was requested.
             </Notice>
@@ -96,5 +111,27 @@ export function ProtectionPage() {
         </Section>
       ) : null}
     </>
+  );
+}
+
+function draftHf(human: string): number | null {
+  const value = bps(human);
+  return value === null ? null : value / 10_000;
+}
+
+function DraftBand({ minimum, target }: { minimum: number | null; target: number | null }) {
+  const min = 1;
+  const max = 1.5;
+  const place = (value: number) => `${((value - min) / (max - min)) * 100}%`;
+  return (
+    <figure className="band">
+      <div className="band-track" role="img" aria-label="Draft policy band from 1.00 to 1.50. Shaded region is the allowed entry range.">
+        <span className="band-allowed" style={{ left: place(1.05), width: `calc(${place(1.4)} - ${place(1.05)})` }} />
+        {minimum !== null ? <span className="band-tick" style={{ left: place(Math.min(max, Math.max(min, minimum))) }}><span>Min {minimum.toFixed(2)}</span></span> : null}
+        {target !== null ? <span className="band-tick" style={{ left: place(Math.min(max, Math.max(min, target))) }}><span>Target {target.toFixed(2)}</span></span> : null}
+      </div>
+      <div className="band-axis num"><span>1.00</span><span>1.50</span></div>
+      <figcaption className="aside">Shaded region is the allowed entry range. Ticks follow this draft and are not registered.</figcaption>
+    </figure>
   );
 }
