@@ -65,6 +65,11 @@ _Last updated: 2026-11-02 (Developer 1)_
 - The vault policy now uses the real 1Click asset ids (Base USDC in, NEAR native USDC out) and a 100 bps limit.
 - For the dry check the recipient secret is `intents.near` (1Click rejects testnet accounts) and the refund address is the docs example EVM address. Both are placeholders for a dry price check only.
 
+## Position + execute on testnet (2026-11-05)  [partly done]
+- Done: `position1.aegis-enclave-dev1.testnet` created (2 NEAR) with `aegis-position` deployed (owner `borrower1...`, vault `vault.aegis-enclave-dev1.testnet`, Burrow testnet). It holds 1000 fake USDC (`usdc.fakes.testnet`) and is registered on Burrow. `swapdeposit.aegis-enclave-dev1.testnet` (0.2 NEAR, registered on the fake USDC) stands in for a swap deposit address. The vault knows `position1` as borrower1's position, and borrower1's policy uses the fake USDC for both sides.
+- NOT done: the OutLayer secrets still say dry-run, so the enclave never returns a non-dry ticket. Changing them needs the `outlayer` CLI, which is not on this machine (disk almost full) and the Codespace will not start (GitHub billing error 402).
+- Next once secrets can be changed: set `AEGIS_LIVE=1`, `AEGIS_RECIPIENT=position1...`, and `AEGIS_QUOTE_JSON` to a clearly-labelled SIMULATED non-dry quote whose `depositAddress` is `swapdeposit.aegis-enclave-dev1.testnet`; trigger; then `execute_approved_rescue(<request id>)`; then `report_intent_status(<id>, SUCCESS)` and check the fake USDC moved and Burrow credited `position1`. None of that involves 1Click or mainnet.
+
 ## Unverified assumptions (must be tested on testnet)
 - (Checked) Burrow accepts the `Execute` message and credits the position account. (Not checked) a real debt going down: Burrow testnet has no oracle prices.
 - The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).

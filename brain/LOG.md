@@ -1,5 +1,15 @@
 # Log: successes, failures, lessons (newest first)
 
+## 2026-11-05 (position + execute, first half)
+**Worked**
+- Position account, swap-deposit stand-in, fake USDC reserve, Burrow registration, policy with testnet assets and `set_position` are all in place on testnet.
+
+**Blocked**
+- Codespace will not start: "HTTP 402 ... billing issue" (GitHub account billing). The OutLayer CLI lives only there, so secrets cannot be changed right now. Local install needs several GB free and C: has about 1 GB.
+
+**Lessons**
+- Do not depend on a single cloud machine for a tool you will need again; keep a local copy or enough disk to rebuild it.
+
 ## 2026-11-04 (live 1Click dry-run quotes)
 **Worked**
 - HTTP from the enclave via `wasi-http-client` on wasip2. End to end: vault -> OutLayer TEE -> live 1Click dry quote -> signed decision -> vault verifies -> `dry_run_quote_verified`.
