@@ -4,7 +4,7 @@ Confidential repayment protection for Rhea/Burrow loans on NEAR. Borrowers store
 
 **Status:** Hackathon prototype on NEAR testnet. Dry-run quotes, vault verification, and a simulated non-dry execute path have been demonstrated. Real cross-chain settlement and real Burrow debt reduction are not shown yet. The web app is read-only: it does not connect a wallet or submit transactions.
 
-![AegisMargin mark](apps/web/public/favicon.svg)
+![AegisMargin application screenshot](docs/images/app-screenshot.png)
 
 | Resource | Location |
 |---|---|
@@ -82,7 +82,7 @@ Amounts are valued in micro-USD (`1_000_000` = `$1`). Ratios are basis points (`
 For each asset:
 
 $$
-V = \frac{\text{amount\textunderscore raw} \times \text{price\textunderscore micro\textunderscore usd}}{10^{\text{decimals}}}
+V = \frac{\text{amount}_{\text{raw}} \times \text{price}_{\text{micro-usd}}}{10^{\text{decimals}}}
 $$
 
 Adjusted collateral and borrow:
@@ -122,7 +122,7 @@ sha256("aegis-policy-v1" || u32be(hf_min) || u32be(hf_target) || u32be(max_slipp
 The enclave trigger floor is also bounded by a volatility buffer:
 
 $$
-\text{HF}_{\text{trigger}} = \max(\text{hf\textunderscore min},\; 1.02 + 2.33 \times \sigma\sqrt{\tau})
+\text{HF}_{\text{trigger}} = \max(\text{hf}_{\text{min}},\; 1.02 + 2.33 \times \sigma\sqrt{\tau})
 $$
 
 with $\tau = 45$ seconds settlement assumption (`BASE_TRIGGER_BPS`, `K_X100`, `SETTLE_SECONDS` in the enclave).
