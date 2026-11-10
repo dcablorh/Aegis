@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { RPC_TESTNET, viewFunction } from "@aegis/rhea-client";
-import { ENCLAVE_X25519_HEX, VAULT_TESTNET } from "../config";
+import { ENCLAVE_X25519_HEX, SAMPLE_ACCOUNT, VAULT_TESTNET } from "../config";
 import { Button, Field, Notice, Pending } from "../ui";
 
 export function SecurityPage() {
-  const [borrower, setBorrower] = useState("borrower1.aegis-enclave-dev1.testnet");
+  const [borrower, setBorrower] = useState(SAMPLE_ACCOUNT);
   const [recipient, setRecipient] = useState("evil.near");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);

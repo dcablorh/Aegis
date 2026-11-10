@@ -42,7 +42,7 @@ See `contracts/README.md`.
 | Burrow balances | Public RPC view of `get_account` |
 | Health factor | Calculated only when every used token has an oracle price |
 | 1Click quote with `dry: true` | Live solver price. No deposit and no swap |
-| Allowlist | `is_recipient_allowed` on `vault.aegis-enclave-dev1.testnet` |
+| Allowlist | `is_recipient_allowed` on `vault.aegis-cloud-319903.testnet` |
 | Policy ciphertext | Built in the browser. Not sent to the vault |
 
 Testnet Burrow prices are currently null, so that account's health factor is withheld. Wallet signing, policy registration, and a non-dry swap are not in this interface.
