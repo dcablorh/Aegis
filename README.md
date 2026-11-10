@@ -77,38 +77,37 @@ Public stop levels are easy to front-run. Fully custodial bots require trusting 
 
 ### Collateral, debt, and health factor
 
-Amounts are valued in micro-USD (`1_000_000` = $1). Ratios are basis points (`10_000` = 1.0). The same integer maths live in `enclave/aegis-wasi/src/math.rs` and `packages/rhea-client/src/math.ts`.
+Amounts are valued in micro-USD (`1_000_000` = \$1). Ratios are basis points (`10_000` = 1.0). The same integer maths live in `enclave/aegis-wasi/src/math.rs` and `packages/rhea-client/src/math.ts`.
 
 For each asset:
 
-\[
+$$
 V = \frac{\text{amount\_raw} \times \text{price\_micro\_usd}}{10^{\text{decimals}}}
-\]
+$$
 
 Adjusted collateral and borrow:
 
-\[
-C_{\text{adj}} = \sum V_c \times \frac{w_c}{10\,000}, \quad
-B_{\text{adj}} = \sum V_b \times \frac{10\,000}{w_b}
-\]
+$$
+C_{\text{adj}} = \sum V_c \times \frac{w_c}{10{,}000}, \quad B_{\text{adj}} = \sum V_b \times \frac{10{,}000}{w_b}
+$$
 
-where \(w\) is Burrow's `volatility_ratio` in basis points.
+where $w$ is Burrow's `volatility_ratio` in basis points.
 
 Health factor:
 
-\[
-\text{HF}_{\text{bps}} = \frac{C_{\text{adj}} \times 10\,000}{B_{\text{adj}}}
-\]
+$$
+\text{HF}_{\text{bps}} = \frac{C_{\text{adj}} \times 10{,}000}{B_{\text{adj}}}
+$$
 
-Example used throughout tests and the judge script: 1000 wrap.testnet at $4.28 with weight 6000 bps versus 2400 USDC debt at $1.00 with weight 10000 bps yields \(\text{HF} = 1.07\) (10700 bps).
+Example used throughout tests and the judge script: 1000 wrap.testnet at \$4.28 with weight 6000 bps versus 2400 USDC debt at \$1.00 with weight 10000 bps yields $\text{HF} = 1.07$ (10700 bps).
 
 ### Liquidation threshold and risk
 
-When \(\text{HF} < 1.0\), the position is liquidatable under this model. Rhea's liquidation discount used in the enclave is:
+When $\text{HF} < 1.0$, the position is liquidatable under this model. Rhea's liquidation discount used in the enclave is:
 
-\[
-d_{\text{bps}} = \frac{10\,000 - \text{HF}_{\text{bps}}}{2} \quad (\text{zero when HF} \ge 1)
-\]
+$$
+d_{\text{bps}} = \frac{10{,}000 - \text{HF}_{\text{bps}}}{2} \quad (\text{zero when } \text{HF} \ge 1)
+$$
 
 `penalty_saved_bps` assumes a further 20% collateral drop before rescue (`STRESS_DROP_BPS = 2000`) and measures the discount avoided under that stress. It is a documented assumption for quote comparison, not a live market measurement.
 
@@ -122,11 +121,11 @@ sha256("aegis-policy-v1" || u32be(hf_min) || u32be(hf_target) || u32be(max_slipp
 
 The enclave trigger floor is also bounded by a volatility buffer:
 
-\[
+$$
 \text{HF}_{\text{trigger}} = \max(\text{hf\_min},\; 1.02 + 2.33 \times \sigma\sqrt{\tau})
-\]
+$$
 
-with \(\tau = 45\) seconds settlement assumption (`BASE_TRIGGER_BPS`, `K_X100`, `SETTLE_SECONDS` in the enclave).
+with $\tau = 45$ seconds settlement assumption (`BASE_TRIGGER_BPS`, `K_X100`, `SETTLE_SECONDS` in the enclave).
 
 ### Cross-chain liquidity
 
