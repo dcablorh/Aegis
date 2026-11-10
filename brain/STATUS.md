@@ -75,3 +75,15 @@ _Last updated: 2026-11-02 (Developer 1)_
 - The exact shape OutLayer returns to the callback (we accept a JSON object or a JSON string holding the decision).
 - Moving the reserve to a 1Click deposit address with a plain token transfer works for NEAR-side origin tokens.
 - Testnet has no NEAR Intents, so the cross-chain leg can only be shown as dry-run quotes there.
+
+## Fresh testnet stack + full execute flow (2026-11-10, cloud session)  [SIMULATED quote, fake tokens, testnet only]
+Why a new stack: the old `aegis-enclave-dev1.testnet` key lived only in an expired Codespace. A new throwaway account was made here.
+- Accounts (all under `aegis-cloud-319903.testnet`): `vault.`, `borrower1.`, `position1.`, `swapdeposit.`. Burrow testnet `contract.1638481328.burrow.testnet`.
+- OutLayer project `aegis-cloud-319903.testnet/aegis`, enclave wasm (wasm32-wasip2) sha256 `6323745e22be396983072e0bab46e673b559db5f6e17836f0d83fd19aec0d050`. Secrets: whitelist of the keeper and the vault.
+- Enclave X25519 key (policies encrypt to this): `31ba381a065a1501238c72b3668fe5b1aecd29074797800b0689bfe8be42b45e`. Seeds are throwaway and are not in the repo.
+- Test tool: `cargo run -p aegis-wasi --example testnet_kit -- keys|policy|trigger|quote` (seeds from env, see its header).
+- **Dry run**: enclave ran in the TEE, vault verified it: `RESCUE_NOT_EXECUTED:dry_run_quote_verified`, lock freed.
+- **Execute flow** (AEGIS_LIVE=1, SIMULATED quote `SIMULATED-testnet-non-dry-1`, deposit address = `swapdeposit.`): `RESCUE_APPROVED:6d6094408d10aec2548ac9f0482d37c6` -> `execute_approved_rescue`: position1 fake USDC 1000 -> 654.05, swapdeposit 0 -> 345.95 (= amountIn in the signed ticket) -> `report_intent_status SUCCESS` -> `RESCUE_SETTLED`, lock IDLE, ticket SUCCESS.
+- Frontend checked in a browser: all routes render with no console errors, wizard completes, live 1Click dry quote works, Security page verdicts match `is_recipient_allowed` on chain (evil.near and the deposit address blocked). `apps/web/src/config.ts` and `scripts/demo-verify.ts` now point at this stack.
+- Still NOT shown: a real Burrow debt going down (position1 has no Burrow debt; Burrow testnet has no oracle prices, so the repay was handed back). The price feed and the position snapshot sent to the enclave are SIMULATED by the keeper (documented 1000 wNEAR vs 2400 USDC example). The swap itself is simulated: NEAR Intents has no testnet.
+- Node scripts in the cloud container need `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`.

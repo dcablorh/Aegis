@@ -9,7 +9,7 @@ import {
   viewFunction,
 } from "../packages/rhea-client/dist/index.js";
 
-const VAULT = "vault.aegis-enclave-dev1.testnet";
+const VAULT = "vault.aegis-cloud-319903.testnet";
 
 function fail(message: string): never {
   console.error(message);
@@ -18,7 +18,7 @@ function fail(message: string): never {
 
 console.log("AegisMargin verification");
 
-const account = await getAccount(BURROW_TESTNET, "alice.aegis-vault-dev1.testnet", { rpcUrl: RPC_TESTNET });
+const account = await getAccount(BURROW_TESTNET, "position1.aegis-cloud-319903.testnet", { rpcUrl: RPC_TESTNET });
 if (!account) fail("Burrow did not return the sample testnet account.");
 console.log(`Live Burrow account ${account.account_id}: collateral ${account.collateral.length}, debt ${account.borrowed.length}.`);
 console.log("Testnet oracle prices are not used here. Health below is the documented example, not this account.");
@@ -53,9 +53,9 @@ console.log(`LIVE 1CLICK DRY-RUN QUOTE ${quote.quote_id}: expected ${quote.solve
 const allowed = await viewFunction<boolean>(
   VAULT,
   "is_recipient_allowed",
-  { account_id: "borrower1.aegis-enclave-dev1.testnet", recipient: "evil.near" },
+  { account_id: "borrower1.aegis-cloud-319903.testnet", recipient: "evil.near" },
   { rpcUrl: RPC_TESTNET },
 );
 if (allowed !== false) fail("evil.near was not blocked");
-console.log("Allowlist: evil.near is blocked for borrower1.aegis-enclave-dev1.testnet.");
+console.log("Allowlist: evil.near is blocked for borrower1.aegis-cloud-319903.testnet.");
 console.log("Verification finished.");
