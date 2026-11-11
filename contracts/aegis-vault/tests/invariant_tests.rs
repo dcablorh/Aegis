@@ -120,6 +120,11 @@ fn invariant_5_every_terminal_state_frees_the_lock() {
         at("keeper.near", 1002);
         let _ = v.execute_approved_rescue(req.clone());
         let _ = v.report_intent_status(req.clone(), end);
+        if end == IntentLifecycleState::Success {
+            // success is only final once Burrow confirms the repay
+            assert_ne!(v.get_lock(id("alice.near")), RescueLock::Idle);
+            v.finish_repay(req.clone(), Some(1));
+        }
         assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle, "{end:?} left the lock held");
         assert_eq!(v.get_ticket(req).unwrap().state, end);
     }
@@ -147,4 +152,16 @@ fn invariant_5_states_cannot_skip_or_go_backwards() {
     let _ = v.execute_approved_rescue(req.clone());
     let _ = v.report_intent_status(req.clone(), IntentLifecycleState::Failed);
     assert!(blocked(|| { let _ = v.report_intent_status(req.clone(), IntentLifecycleState::Success); }).contains("ERR_BAD_STATE_TRANSITION"));
+}
+
+#[test]
+fn oversized_price_history_is_rejected_before_locking() {
+    let mut v = vault();
+    at("keeper.near", 1000);
+    let history = vec![feed(&oracle_key(), 1000); 17];
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = v.trigger_solvency_check(id("alice.near"), empty_position(), feed(&oracle_key(), 1000), history);
+    }));
+    assert!(r.is_err());
+    assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
 }

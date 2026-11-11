@@ -117,5 +117,8 @@ fn a_genuine_rescue_still_goes_through_after_all_that() {
     at("keeper.near", 1002);
     let _ = v.execute_approved_rescue(req.clone());
     assert!(v.report_intent_status(req.clone(), IntentLifecycleState::Success).is_some());
+    // a keeper's say-so alone does not free the lock; Burrow's confirmed repay does
+    assert_ne!(v.get_lock(id("alice.near")), RescueLock::Idle);
+    v.finish_repay(req, Some(345_600_000));
     assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
 }
