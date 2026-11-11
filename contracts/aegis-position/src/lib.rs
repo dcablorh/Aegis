@@ -25,6 +25,11 @@ impl AegisPosition {
         Self { owner_id, vault_id, burrow_id }
     }
 
+    /// Lets the vault confirm who owns this position before it links the two.
+    pub fn get_owner(&self) -> AccountId {
+        self.owner_id.clone()
+    }
+
     /// Vault only. Sends reserve tokens to a swap deposit address that the vault verified.
     pub fn send_reserve(&mut self, token_id: AccountId, amount: U128, deposit_address: AccountId) -> Promise {
         self.assert_vault();
@@ -91,6 +96,11 @@ mod tests {
 
     fn as_caller(who: &str) {
         testing_env!(VMContextBuilder::new().predecessor_account_id(id(who)).build());
+    }
+
+    #[test]
+    fn reports_its_owner() {
+        assert_eq!(pos().get_owner(), id("alice.near"));
     }
 
     #[test]

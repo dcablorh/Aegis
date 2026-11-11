@@ -19,6 +19,8 @@ use crate::{AegisVault, AegisVaultExt};
 const ENCLAVE_MAX_INSTRUCTIONS: u64 = 1_000_000_000;
 const ENCLAVE_MAX_MEMORY_MB: u32 = 128;
 const ENCLAVE_MAX_SECONDS: u64 = 10;
+/// A ticket older than this is not executed: the 1Click quote it carries has expired and the price has moved.
+const MAX_TICKET_AGE_NS: u64 = 5 * 60 * 1_000_000_000;
 const REQUEST_GAS: Gas = Gas::from_tgas(100);
 const CALLBACK_GAS: Gas = Gas::from_tgas(30);
 const POSITION_SEND_GAS: Gas = Gas::from_tgas(60);
@@ -113,6 +115,10 @@ impl AegisVault {
         let d = &rec.ticket.decision;
         let q = d.oneclick_quote.as_ref().unwrap_or_else(|| env::panic_str("ERR_NO_QUOTE"));
         require!(!q.dry, "ERR_DRY_RUN_QUOTE_CANNOT_EXECUTE");
+        require!(
+            env::block_timestamp().saturating_sub(rec.ticket.created_at_ns) <= MAX_TICKET_AGE_NS,
+            "ERR_TICKET_EXPIRED"
+        );
         self.assert_attested_recipient(&d.account_id, &rec.deposit_account);
         let position = self.positions.get(&d.account_id).cloned().unwrap_or_else(|| env::panic_str("ERR_NO_POSITION"));
         let amount_in: u128 = q.amount_in.parse().unwrap_or_else(|_| env::panic_str("ERR_BAD_AMOUNT"));

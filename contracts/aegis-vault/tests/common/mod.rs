@@ -55,7 +55,7 @@ pub fn vault() -> AegisVault {
     v.register_keeper(id("keeper.near"));
     at("alice.near", 1000);
     v.register_policy("ab".repeat(32), "Y2lwaGVy".into(), vec!["nep141:base-usdc.omft.near".into()], "nep141:usdc.near".into());
-    v.set_position(id("alice.pos.vault.near"));
+    v.finish_set_position(id("alice.near"), id("alice.pos.vault.near"), Some(id("alice.near")));
     v
 }
 

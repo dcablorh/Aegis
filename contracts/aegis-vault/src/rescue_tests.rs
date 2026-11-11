@@ -52,7 +52,7 @@ fn vault() -> AegisVault {
     v.register_keeper(id("keeper.near"));
     as_caller("alice.near", 1000);
     v.register_policy("ab".repeat(32), "Y2lwaGVy".into(), vec!["nep141:base-usdc.omft.near".into()], "nep141:usdc.near".into());
-    v.set_position(id("alice.pos.vault.near"));
+    v.finish_set_position(id("alice.near"), id("alice.pos.vault.near"), Some(id("alice.near")));
     v
 }
 
@@ -284,6 +284,15 @@ fn keeper_executes_once_then_success_frees_the_lock() {
     assert!(v.report_intent_status("r1".into(), IntentLifecycleState::Success).is_some());
     assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Success);
     assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
+}
+
+#[test]
+#[should_panic(expected = "ERR_TICKET_EXPIRED")]
+fn stale_ticket_cannot_be_executed() {
+    let mut v = vault();
+    approved(&mut v);
+    as_caller("keeper.near", 1000 + 301);
+    let _ = v.execute_approved_rescue("r1".into());
 }
 
 #[test]

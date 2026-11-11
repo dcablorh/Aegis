@@ -8,7 +8,7 @@ mod rescue_tests;
 
 use aegis_types::{errors, EncryptedSolvencyPolicy, RescueLock};
 use near_sdk::store::{LookupMap, LookupSet};
-use near_sdk::{env, near, require, AccountId, BorshStorageKey, PanicOnDefault};
+use near_sdk::{env, near, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise, PromiseError};
 
 /// Upper bound on ciphertext size so a user cannot bloat contract storage.
 const MAX_PAYLOAD_LEN: usize = 4096;
@@ -155,10 +155,28 @@ impl AegisVault {
     }
 
     /// Borrower names the sub-account that holds their Burrow loan. Rescue funds may flow to and from it.
-    pub fn set_position(&mut self, position_account_id: AccountId) {
+    /// The position contract must report the caller as its owner, otherwise any borrower could point
+    /// at someone else's position and make the vault move that person's reserve.
+    pub fn set_position(&mut self, position_account_id: AccountId) -> Promise {
         let owner = env::predecessor_account_id();
         require!(self.lock_of(&owner) == RescueLock::Idle, errors::RESCUE_IN_FLIGHT);
-        self.positions.insert(owner, position_account_id);
+        Promise::new(position_account_id.clone())
+            .function_call("get_owner", Vec::new(), NearToken::from_yoctonear(0), Gas::from_tgas(5))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(Gas::from_tgas(10))
+                    .on_position_owner_checked(owner, position_account_id),
+            )
+    }
+
+    #[private]
+    pub fn on_position_owner_checked(
+        &mut self,
+        borrower: AccountId,
+        position_account_id: AccountId,
+        #[callback_result] result: Result<AccountId, PromiseError>,
+    ) -> bool {
+        self.finish_set_position(borrower, position_account_id, result.ok())
     }
 
     pub fn get_position(&self, account_id: AccountId) -> Option<AccountId> {
@@ -194,6 +212,16 @@ impl AegisVault {
 }
 
 impl AegisVault {
+    /// Stores the position only if it reported `borrower` as its owner and no rescue started meanwhile.
+    pub fn finish_set_position(&mut self, borrower: AccountId, position: AccountId, reported_owner: Option<AccountId>) -> bool {
+        if reported_owner.as_ref() != Some(&borrower) || self.lock_of(&borrower) != RescueLock::Idle {
+            env::log_str("AEGIS_EVENT:POSITION_REJECTED:owner_mismatch_or_busy");
+            return false;
+        }
+        self.positions.insert(borrower, position);
+        true
+    }
+
     pub(crate) fn lock_of(&self, account_id: &AccountId) -> RescueLock {
         self.locks.get(account_id).cloned().unwrap_or(RescueLock::Idle)
     }
@@ -252,6 +280,23 @@ mod tests {
     fn register(v: &mut AegisVault, who: &str) {
         as_caller(who);
         v.register_policy("ab".repeat(32), "Y2lwaGVy".into(), vec!["nep141:base.omft.near".into()], "nep141:usdc".into());
+    }
+
+    #[test]
+    fn position_must_report_the_borrower_as_owner() {
+        let mut v = vault();
+        assert!(!v.finish_set_position(id("bob.near"), id("alice.pos.near"), Some(id("alice.near"))));
+        assert!(v.get_position(id("bob.near")).is_none());
+        assert!(!v.finish_set_position(id("bob.near"), id("alice.pos.near"), None));
+        assert!(v.finish_set_position(id("alice.near"), id("alice.pos.near"), Some(id("alice.near"))));
+        assert_eq!(v.get_position(id("alice.near")), Some(id("alice.pos.near")));
+    }
+
+    #[test]
+    fn position_not_linked_while_rescue_in_flight() {
+        let mut v = vault();
+        v.locks.insert(id("alice.near"), RescueLock::InFlight { request_id: "r1".into() });
+        assert!(!v.finish_set_position(id("alice.near"), id("alice.pos.near"), Some(id("alice.near"))));
     }
 
     #[test]
