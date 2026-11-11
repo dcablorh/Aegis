@@ -153,3 +153,15 @@ fn invariant_5_states_cannot_skip_or_go_backwards() {
     let _ = v.report_intent_status(req.clone(), IntentLifecycleState::Failed);
     assert!(blocked(|| { let _ = v.report_intent_status(req.clone(), IntentLifecycleState::Success); }).contains("ERR_BAD_STATE_TRANSITION"));
 }
+
+#[test]
+fn oversized_price_history_is_rejected_before_locking() {
+    let mut v = vault();
+    at("keeper.near", 1000);
+    let history = vec![feed(&oracle_key(), 1000); 17];
+    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _ = v.trigger_solvency_check(id("alice.near"), empty_position(), feed(&oracle_key(), 1000), history);
+    }));
+    assert!(r.is_err());
+    assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
+}

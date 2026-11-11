@@ -17,7 +17,7 @@ Scope note: first-pass audit from the repository plus web research on 2026-11-11
 | 3 | Medium | `report_intent_status(Success)` is keeper-asserted, and a failed repay was still recorded as `SUCCESS` with the lock freed. | Partly fixed: ticket stays `PROCESSING` and locked until Burrow reports a non-zero repaid amount (`on_repay_result`), else `RESCUE_REPAY_FAILED` and the keeper can retry. Still open: the keeper can claim the swap settled; the worst case is repaying the borrower's own debt from balance already in the position. Verifying settlement itself needs a human decision. |
 | 4 | Medium | `attestation_sha256` is a field the enclave signs about itself. No remote attestation of the OutLayer TEE is verified on chain or off chain, so "confidential execution" rests on OutLayer's trust. | Open. Do not claim verified attestation. |
 | 5 | Medium | `force_clear_lock` (owner) could clear a lock while a ticket is `Processing`. | Fixed: refused (`ERR_TICKET_PROCESSING`) for the first hour; after that it clears and marks the ticket `FAILED`. |
-| 6 | Low | `price_history` is unbounded in `trigger_solvency_check`. | Open. |
+| 6 | Low | `price_history` is unbounded in `trigger_solvency_check`. | Fixed: max 16 entries (`ERR_PRICE_HISTORY_TOO_LONG`). Test added. |
 | 7 | Info | The cross-chain swap, the Burrow position snapshot and the debt drop were never shown for real (simulated quote, fake tokens). The repo's own docs say so. | Open; needs a tiny mainnet run with explicit owner approval. |
 
 ## Deployment impact of the fixes

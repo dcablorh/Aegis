@@ -21,6 +21,7 @@ const ENCLAVE_MAX_MEMORY_MB: u32 = 128;
 const ENCLAVE_MAX_SECONDS: u64 = 10;
 /// A ticket older than this is not executed: the 1Click quote it carries has expired and the price has moved.
 const MAX_TICKET_AGE_NS: u64 = 5 * 60 * 1_000_000_000;
+const MAX_PRICE_HISTORY: usize = 16;
 const REQUEST_GAS: Gas = Gas::from_tgas(100);
 const CALLBACK_GAS: Gas = Gas::from_tgas(30);
 const POSITION_SEND_GAS: Gas = Gas::from_tgas(60);
@@ -60,6 +61,7 @@ impl AegisVault {
         let policy = self.policies.get(&account_id).cloned().unwrap_or_else(|| env::panic_str("ERR_NO_POLICY"));
         require!(self.lock_of(&account_id) == RescueLock::Idle, errors::RESCUE_IN_FLIGHT);
         self.assert_valid_oracle_payload(&price);
+        require!(price_history.len() <= MAX_PRICE_HISTORY, "ERR_PRICE_HISTORY_TOO_LONG");
         for old in &price_history {
             // history is allowed to be older than 60s, but must still be signed by the pinned key
             self.assert_signed_only(old);
