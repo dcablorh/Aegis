@@ -120,6 +120,11 @@ fn invariant_5_every_terminal_state_frees_the_lock() {
         at("keeper.near", 1002);
         let _ = v.execute_approved_rescue(req.clone());
         let _ = v.report_intent_status(req.clone(), end);
+        if end == IntentLifecycleState::Success {
+            // success is only final once Burrow confirms the repay
+            assert_ne!(v.get_lock(id("alice.near")), RescueLock::Idle);
+            v.finish_repay(req.clone(), Some(1));
+        }
         assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle, "{end:?} left the lock held");
         assert_eq!(v.get_ticket(req).unwrap().state, end);
     }

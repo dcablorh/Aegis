@@ -282,8 +282,60 @@ fn keeper_executes_once_then_success_frees_the_lock() {
     let _ = v.execute_approved_rescue("r1".into());
     assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Processing);
     assert!(v.report_intent_status("r1".into(), IntentLifecycleState::Success).is_some());
+    // not settled until Burrow confirms the repay
+    assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Processing);
+    assert_ne!(v.get_lock(id("alice.near")), RescueLock::Idle);
+    v.finish_repay("r1".into(), Some(345_600_000));
     assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Success);
     assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
+}
+
+fn failed_repay_case(used: Option<u128>) {
+    {
+        let mut v = vault();
+        approved(&mut v);
+        as_caller("keeper.near", 1000);
+        let _ = v.execute_approved_rescue("r1".into());
+        let _ = v.report_intent_status("r1".into(), IntentLifecycleState::Success);
+        v.finish_repay("r1".into(), used);
+        assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Processing);
+        assert_ne!(v.get_lock(id("alice.near")), RescueLock::Idle);
+        // the keeper can retry
+        assert!(v.report_intent_status("r1".into(), IntentLifecycleState::Success).is_some());
+    }
+}
+
+#[test]
+fn repay_call_failure_keeps_ticket_processing_and_locked() {
+    failed_repay_case(None);
+}
+
+#[test]
+fn repay_that_used_nothing_keeps_ticket_processing_and_locked() {
+    failed_repay_case(Some(0));
+}
+
+#[test]
+#[should_panic(expected = "ERR_TICKET_PROCESSING")]
+fn owner_cannot_clear_lock_while_reserve_in_flight() {
+    let mut v = vault();
+    approved(&mut v);
+    as_caller("keeper.near", 1000);
+    let _ = v.execute_approved_rescue("r1".into());
+    as_caller("admin.near", 1100);
+    v.force_clear_lock(id("alice.near"));
+}
+
+#[test]
+fn owner_can_clear_a_stuck_processing_lock_after_an_hour() {
+    let mut v = vault();
+    approved(&mut v);
+    as_caller("keeper.near", 1000);
+    let _ = v.execute_approved_rescue("r1".into());
+    as_caller("admin.near", 1000 + 3601);
+    v.force_clear_lock(id("alice.near"));
+    assert_eq!(v.get_lock(id("alice.near")), RescueLock::Idle);
+    assert_eq!(v.get_ticket("r1".into()).unwrap().state, IntentLifecycleState::Failed);
 }
 
 #[test]

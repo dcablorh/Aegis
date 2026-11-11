@@ -6,13 +6,14 @@ mod rescue;
 #[cfg(test)]
 mod rescue_tests;
 
-use aegis_types::{errors, EncryptedSolvencyPolicy, RescueLock};
+use aegis_types::{errors, EncryptedSolvencyPolicy, IntentLifecycleState, RescueLock};
 use near_sdk::store::{LookupMap, LookupSet};
 use near_sdk::{env, near, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise, PromiseError};
 
 /// Upper bound on ciphertext size so a user cannot bloat contract storage.
 const MAX_PAYLOAD_LEN: usize = 4096;
 const MAX_ASSETS: usize = 16;
+const STUCK_TICKET_NS: u64 = 60 * 60 * 1_000_000_000;
 
 #[derive(BorshStorageKey)]
 #[near]
@@ -200,8 +201,21 @@ impl AegisVault {
     }
 
     /// Emergency valve: owner frees a lock that got stuck (for example OutLayer never answered).
+    /// Refused while the borrower's ticket is Processing (reserve may be in flight) unless it has been stuck for an hour.
     pub fn force_clear_lock(&mut self, account_id: AccountId) {
         self.assert_owner();
+        if let Some(RescueLock::InFlight { request_id }) = self.locks.get(&account_id).cloned() {
+            if let Some(mut rec) = self.tickets.get(&request_id).cloned() {
+                if rec.state == IntentLifecycleState::Processing {
+                    let age = env::block_timestamp().saturating_sub(rec.ticket.created_at_ns);
+                    require!(age > STUCK_TICKET_NS, "ERR_TICKET_PROCESSING");
+                }
+                if !rec.state.is_terminal() {
+                    rec.state = IntentLifecycleState::Failed;
+                    self.tickets.insert(request_id, rec);
+                }
+            }
+        }
         self.locks.remove(&account_id);
     }
 
