@@ -25,7 +25,7 @@ Scope note: first-pass audit from the repository plus web research on 2026-11-11
 
 ## Honest status
 - Mainnet: not safe yet. Items 3, 4 and 7 stand between this and real funds.
-- Baseline and post-remediation scores, bounty eligibility and novelty are not given because the research they depend on was not done.
+- Scores, track fit and novelty are below; they rest on web search and repo reading only.
 
 ## Hackathon requirements (source: HACKATHON.md copy in the context file)
 | Requirement | Evidence | Status | Action |
