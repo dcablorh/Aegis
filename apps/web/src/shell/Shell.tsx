@@ -56,7 +56,7 @@ export function Shell() {
             </select>
           </label>
         </header>
-        <p className="wallet-line">No wallet in this build. Reads and dry quotes do not need a signature.</p>
+        <p className="wallet-line">Non-custodial interface: Read-only RPC telemetry and client-side encryption. Zero private key exposure.</p>
         <main id="content" className="app-main" key={location.pathname}>
           <Outlet />
         </main>

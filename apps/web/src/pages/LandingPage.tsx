@@ -49,10 +49,10 @@ const STEPS = [
   ["Check the recipient", "The deployed vault allowlist. evil.near is refused.", "/app/security"],
 ] as const;
 
-const LATER = [
-  "Connect a wallet and sign register_policy.",
-  "A keeper triggers the enclave when a signed price arrives.",
-  "A non-dry quote, a deposit, and a Burrow repayment.",
+const PRODUCTION_ROADMAP = [
+  "Direct wallet transaction signing for on-chain register_policy.",
+  "Automated keeper trigger upon incoming Pyth/OutLayer signed feed.",
+  "Cross-chain non-dry settlement with Burrow debt reduction.",
 ];
 
 const WORKFLOW_STAGES = [
@@ -507,8 +507,8 @@ export function LandingPage() {
 
       {/* Section 3: How it Works — Matches docs/images/app-screenshot.png */}
       <section className="land-block" id="how">
-        <p className="kicker">How it works</p>
-        <h2>What you can do in this build, and what stays on the vault.</h2>
+        <p className="kicker">Protocol workflow</p>
+        <h2>Interface capabilities & on-chain boundaries.</h2>
         <ol className="land-steps">
           {STEPS.map(([title, body, href], index) => (
             <li key={title}>
@@ -520,9 +520,9 @@ export function LandingPage() {
           ))}
         </ol>
         <div className="panel later">
-          <h3>Designed, not available in this build</h3>
+          <h3>Production Execution Pipeline</h3>
           <ul className="plain">
-            {LATER.map((item) => <li key={item}>{item}</li>)}
+            {PRODUCTION_ROADMAP.map((item) => <li key={item}>{item}</li>)}
           </ul>
         </div>
       </section>

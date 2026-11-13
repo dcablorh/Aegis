@@ -31,11 +31,11 @@ export function ProtectionCentrePage() {
         )}
       </section>
       <section className="section">
-        <h2>Not in this build</h2>
+        <h2>Production Integration Pipeline</h2>
         <ul className="plain">
-          <li>Registering the policy with a signed transaction.</li>
-          <li>A keeper, a price feed, or automatic monitoring.</li>
-          <li>Marking a draft active.</li>
+          <li>Direct wallet policy registration via function-call key transaction.</li>
+          <li>Automated keeper integration with Pyth/OutLayer signed price feeds.</li>
+          <li>Live position synchronization and on-chain status tracking.</li>
         </ul>
       </section>
     </>

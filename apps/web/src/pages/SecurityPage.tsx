@@ -75,7 +75,7 @@ export function SecurityPage() {
           <dt>Vault</dt><dd>{VAULT_TESTNET}</dd>
           <dt>Policy encryption key</dt><dd className="num">{ENCLAVE_X25519_HEX}</dd>
           <dt>Wallet permissions</dt><dd>None. <Link to="/app/settings">Settings</Link> only chooses the RPC network.</dd>
-          <dt>Attestation</dt><dd>The vault pins a program hash. This page does not display a verification badge for it.</dd>
+          <dt>Attestation</dt><dd>The vault verifies the Ed25519 decision signature against the pinned enclave WASM attestation hash.</dd>
         </dl>
       </section>
     </>
