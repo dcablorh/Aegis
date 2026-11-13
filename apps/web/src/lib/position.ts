@@ -11,11 +11,13 @@ import {
   health,
   liquidationDiscountBps,
   priceToMicroUsd,
+  viewFunction,
   type BurrowAccount,
   type OraclePrice,
 } from "@aegis/rhea-client";
 import { formatHf, formatUnits } from "../format";
 import type { Network } from "./session";
+import { VAULT_TESTNET } from "../config";
 
 export interface Row {
   tokenId: string;
@@ -39,12 +41,37 @@ export async function loadPosition(network: Network, accountId: string): Promise
   const rpcUrl = network === "testnet" ? RPC_TESTNET : RPC_MAINNET;
   const burrowId = network === "testnet" ? BURROW_TESTNET : BURROW_MAINNET;
   const options = { rpcUrl };
-  const [account, assets, config] = await Promise.all([
-    getAccount(burrowId, accountId, options),
+
+  let targetId = accountId.trim();
+  let [account, assets, config] = await Promise.all([
+    getAccount(burrowId, targetId, options),
     getAssetsPaged(burrowId, options),
     getConfig(burrowId, options),
   ]);
-  if (!account) throw new Error(`Burrow has no account for ${accountId}.`);
+
+  // If Burrow returns no account and we are on testnet, check if accountId is a registered borrower whose position sub-account is mapped on the vault
+  if (!account && network === "testnet") {
+    try {
+      const mapped = await viewFunction<string | null>(
+        VAULT_TESTNET,
+        "get_position",
+        { account_id: targetId },
+        options
+      );
+      if (mapped) {
+        targetId = mapped;
+        account = await getAccount(burrowId, targetId, options);
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  if (!account) {
+    throw new Error(
+      `Burrow has no account for "${accountId}". On testnet, try the deployed position sub-account: position1.aegis-cloud-319903.testnet`
+    );
+  }
   const prices = await getOraclePrices(config.oracle_account_id, options);
   const priceById = new Map(prices.prices.map((entry) => [entry.asset_id, entry.price]));
   const configById = new Map(assets.map((asset) => [asset.token_id, asset.config]));
