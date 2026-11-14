@@ -23,6 +23,9 @@ export interface DraftRecord {
   commitment: string;
   ciphertext: string;
   salt: string;
+  action?: string;
+  originAsset?: string;
+  destinationAsset?: string;
 }
 
 export interface QuoteRecord {
