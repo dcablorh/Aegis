@@ -8,3 +8,4 @@ dist/
 .next/
 target-dbg/
 .vite/
+.vercel
