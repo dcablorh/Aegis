@@ -22,6 +22,9 @@ export function DraftPage() {
       <Notice title="Not submitted">The ciphertext is in this browser only. The vault still has no record of it, and no approval was requested.</Notice>
       <dl className="sheet spaced">
         <dt>Account</dt><dd>{draft.accountId}</dd>
+        {draft.action ? <><dt>Action Strategy</dt><dd><b>{draft.action}</b></dd></> : null}
+        {draft.originAsset ? <><dt>Origin Reserve</dt><dd><code>{draft.originAsset}</code></dd></> : null}
+        {draft.destinationAsset ? <><dt>Target Repay Asset</dt><dd><code>{draft.destinationAsset}</code></dd></> : null}
         <dt>Commitment</dt><dd className="num">{draft.commitment}</dd>
         <dt>Salt</dt><dd className="num">{draft.salt}</dd>
         <dt>Enclave key</dt><dd className="num">{ENCLAVE_X25519_HEX}</dd>
