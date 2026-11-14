@@ -8,7 +8,6 @@ Confidential repayment protection for Rhea/Burrow loans on NEAR. Borrowers store
 
 | Resource | Location |
 |---|---|
-| Live Demo | [https://aegis-ten-drab.vercel.app](https://aegis-ten-drab.vercel.app) |
 | Repository | [github.com/dcablorh/Aegis](https://github.com/dcablorh/Aegis) |
 | License | [MIT](LICENSE) |
 | Contract and enclave notes | [contracts/README.md](contracts/README.md) |
@@ -466,7 +465,7 @@ pnpm --filter @aegis/web build
 # then from apps/web: npx vite preview
 ```
 
-Vercel: deployed at [https://aegis-ten-drab.vercel.app](https://aegis-ten-drab.vercel.app). Managed via root `vercel.json` in services mode (`web` service pointing to `apps/web` with internal SPA rewrites).
+Vercel: set project root to `apps/web`, output `dist`. SPA rewrites are in `apps/web/vercel.json`.
 
 ### Judge / smoke script
 
